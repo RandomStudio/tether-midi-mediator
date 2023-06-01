@@ -51,9 +51,9 @@ fn main() {
         loop {
             while let Ok(msg) = &model.rx.try_recv() {
                 model.handle_incoming_midi(&msg);
-                std::thread::sleep(Duration::from_millis(1));
                 debug!("Last received message: {}", &model.last_msg_received);
             }
+            std::thread::sleep(Duration::from_millis(1));
         }
     } else {
         info!("Running graphics mode");
