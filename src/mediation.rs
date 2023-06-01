@@ -61,10 +61,10 @@ impl MediationDataModel {
         }
     }
 
-    pub fn add_port(&mut self, index: usize) {
+    pub fn add_port(&mut self, index: usize, full_name: String) {
         // let shortened_name = full_name.replace(" ", "_").trim().to_lowercase();
         let port_key = format!("{index}");
-        let full_name = String::from("unknown");
+        // let full_name = String::from("unknown");
         self.port_info.insert(
             port_key,
             PortInformation {

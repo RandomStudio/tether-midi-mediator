@@ -1,12 +1,14 @@
-use std::{sync::mpsc, time::Duration};
+use std::{error::Error, sync::mpsc, time::Duration};
 
 use log::{debug, info, warn};
-use midi_msg::{MidiMsg, ReceiverContext};
-use midir::{Ignore, MidiInput};
+use midi_msg::{MidiMsg, ReceiverContext, SystemRealTimeMsg};
+use midir::{ConnectError, Ignore, MidiInput, MidiInputConnection, MidiInputPort};
 
 use crate::mediation::MidiReceiverPayload;
 
-pub fn listen_for_midi(preferred_port: usize, tx: mpsc::Sender<MidiReceiverPayload>) {
+pub fn listen_for_midi(
+    preferred_port: usize,
+) -> Result<(MidiInput, MidiInputPort, String), Box<dyn Error>> {
     let mut midi_in = MidiInput::new("midir reading input").expect("midir failure");
     midi_in.ignore(Ignore::None);
 
@@ -22,7 +24,6 @@ pub fn listen_for_midi(preferred_port: usize, tx: mpsc::Sender<MidiReceiverPaylo
             &in_ports[0]
         }
         _ => {
-            debug!("Available input ports:");
             for (i, p) in in_ports.iter().enumerate() {
                 info!("{}: {}", i, midi_in.port_name(p).unwrap());
             }
@@ -32,29 +33,36 @@ pub fn listen_for_midi(preferred_port: usize, tx: mpsc::Sender<MidiReceiverPaylo
 
     let in_port_name = midi_in.port_name(in_port).expect("Failed to get port name");
 
-    let mut ctx = ReceiverContext::new();
     // _conn_in needs to be a named parameter, because it needs to be kept alive until the end of the scope
-    let _conn_in = midi_in.connect(
-        in_port,
-        "midir-read-input",
-        move |_stamp, midi_bytes, _| {
-            let (msg, _len) =
-                MidiMsg::from_midi_with_context(&midi_bytes, &mut ctx).expect("Not an error");
+    // let conn_in = midi_in.connect(
+    //     in_port,
+    //     "midir-read-input",
+    //     move |stamp, midi_bytes, _| {
+    //         let (msg, _len) =
+    //             MidiMsg::from_midi_with_context(&midi_bytes, &mut ctx).expect("Not an error");
 
-            tx.send((preferred_port, msg))
-                .expect("failed to send on MIDI thread");
-        },
-        (),
-    );
+    //         // Print everything but spammy clock messages.
+    //         if let MidiMsg::SystemRealTime {
+    //             msg: SystemRealTimeMsg::TimingClock,
+    //         } = msg
+    //         {
+    //             // no-op
+    //         } else {
+    //             println!("{}: {:?}", stamp, msg);
+    //         }
+    //     },
+    //     (),
+    // )?;
+    Ok((midi_in, in_port.to_owned(), in_port_name))
 
-    info!(
-        "MIDI connection open, reading input from '{}'.",
-        in_port_name
-    );
+    // info!(
+    //     "MIDI connection open, reading input from '{}'.",
+    //     in_port_name
+    // );
 
-    loop {
-        std::thread::sleep(Duration::from_millis(1));
-    }
+    // loop {
+    //     std::thread::sleep(Duration::from_millis(1));
+    // }
 
     // warn!("Closing connection");
 }
