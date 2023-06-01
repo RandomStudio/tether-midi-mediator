@@ -5,8 +5,26 @@ use tether_agent::TetherAgent;
 
 use crate::mediation::TetherMidiMessage;
 
-pub fn start_tether_agent(rx: Receiver<TetherMidiMessage>) -> JoinHandle<()> {
-    let agent = TetherAgent::new("midi", None, None);
+pub struct TetherSettings {
+    pub host: std::net::IpAddr,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub role: String,
+    pub id: Option<String>,
+}
+pub fn start_tether_agent(
+    rx: Receiver<TetherMidiMessage>,
+    settings: TetherSettings,
+) -> JoinHandle<()> {
+    let agent = TetherAgent::new(
+        &settings.role,
+        if let Some(override_id) = &settings.id {
+            Some(&override_id)
+        } else {
+            None
+        },
+        Some(settings.host),
+    );
     match agent.connect(None, None) {
         Ok(()) => {
             let note_on_output = agent
@@ -23,7 +41,6 @@ pub fn start_tether_agent(rx: Receiver<TetherMidiMessage>) -> JoinHandle<()> {
                 .expect("failed to create output plug");
             let tether_thread = std::thread::spawn(move || loop {
                 if let Ok(msg) = rx.recv() {
-                    // agent.encode_and_publish(plug, data)
                     debug!("Tether Thread received message via Model: {:?}", &msg);
                     match msg {
                         TetherMidiMessage::Raw(payload) => {

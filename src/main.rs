@@ -3,37 +3,19 @@ use std::{
     time::Duration,
 };
 
-use clap::{command, Parser};
+use clap::Parser;
 use eframe::egui;
 use env_logger::Env;
 use log::{debug, info, warn};
 use mediation::MediationDataModel;
 use midi_interface::listen_for_midi;
-use tether_interface::start_tether_agent;
+use settings::Cli;
+use tether_interface::{start_tether_agent, TetherSettings};
 
 mod mediation;
 mod midi_interface;
+mod settings;
 mod tether_interface;
-
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-pub struct Cli {
-    #[arg(long = "loglevel",default_value_t=String::from("info"))]
-    log_level: String,
-
-    /// Flag to enable headless (no GUI) mode, suitable for server-type
-    /// process
-    #[arg(long = "headless")]
-    headless_mode: bool,
-
-    /// Flag to disable Tether connection
-    #[arg(long = "tether.disable")]
-    tether_disable: bool,
-
-    /// Specify one or more MIDI ports by index, in any order
-    #[clap()]
-    midi_ports: Vec<usize>,
-}
 
 fn main() {
     let cli = Cli::parse();
@@ -56,7 +38,16 @@ fn main() {
     if cli.tether_disable {
         warn!("Tether connection disabled; local-mode only");
     } else {
-        handles.push(start_tether_agent(tether_rx));
+        handles.push(start_tether_agent(
+            tether_rx,
+            TetherSettings {
+                host: cli.tether_host,
+                username: cli.tether_username,
+                password: cli.tether_password,
+                role: cli.tether_role,
+                id: cli.tether_id,
+            },
+        ));
     }
 
     for port in cli.midi_ports {
