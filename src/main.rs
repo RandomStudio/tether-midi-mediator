@@ -9,8 +9,9 @@ use egui::{Color32, RichText};
 use env_logger::Env;
 use log::{debug, info, warn};
 use mediation::MediationDataModel;
-use midi_interface::listen_for_midi;
+use midi_interface::get_midi_connection;
 use midi_msg::{MidiMsg, ReceiverContext, SystemRealTimeMsg};
+use midir::{Ignore, MidiInput};
 use settings::Cli;
 use tether_interface::{start_tether_agent, TetherSettings};
 
@@ -53,14 +54,17 @@ fn main() {
     }
 
     for port in cli.midi_ports {
+        let mut midi_input = MidiInput::new("midir reading input").expect("midir failure");
+        midi_input.ignore(Ignore::None);
+
         let midi_tx = midi_tx.clone();
-        let (midi_system, midi_input_port, port_name) =
-            listen_for_midi(port).expect("failed to open MIDI port");
+        let (midi_input_port, port_name) =
+            get_midi_connection(&midi_input, port).expect("failed to open MIDI port");
         model.add_port(port, port_name);
         let midi_thread = std::thread::spawn(move || {
             let mut ctx = ReceiverContext::new();
 
-            let _connection = midi_system
+            let _connection = midi_input
                 .connect(
                     &midi_input_port,
                     "midir-read-input",
@@ -141,8 +145,10 @@ impl eframe::App for MediationDataModel {
                 ui.horizontal(|ui| {
                     ui.label(&format!("{} :{}", info.index, info.full_name));
                     if let Ok(elapsed) = info.last_received.elapsed() {
-                        let color = if elapsed > Duration::from_secs(3) {
+                        let color = if elapsed > Duration::from_secs(5) {
                             Color32::RED
+                        } else if elapsed > Duration::from_secs(1) {
+                            Color32::LIGHT_YELLOW
                         } else {
                             Color32::GREEN
                         };
