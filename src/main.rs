@@ -1,7 +1,5 @@
 use std::{
-    error::Error,
-    io::stdin,
-    sync::mpsc::{self, Receiver, Sender},
+    sync::mpsc::{self},
     time::Duration,
 };
 
@@ -9,9 +7,12 @@ use clap::{command, Parser};
 use eframe::egui;
 use env_logger::Env;
 use log::{debug, error, info, warn};
-use midi_msg::{ControlChange, MidiMsg, ReceiverContext};
-use midir::{Ignore, MidiInput};
+use mediation::MediationDataModel;
+use midi_interface::listen_for_midi;
 use tether_agent::TetherAgent;
+
+mod mediation;
+mod midi_interface;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -42,12 +43,14 @@ fn main() {
         .filter_module("eframe", log::LevelFilter::Warn)
         .init();
 
+    // TODO: we don't really use these handles or join them
+    // Might be useful for closing things down properly, though
     let mut handles = Vec::new();
 
     let (midi_tx, midi_rx) = mpsc::channel();
     let (tether_tx, tether_rx) = mpsc::channel();
 
-    let mut model = Model::new(midi_rx, tether_tx);
+    let mut model = MediationDataModel::new(midi_rx, tether_tx);
 
     if cli.tether_disable {
         warn!("Tether connection disabled; local-mode only");
@@ -56,11 +59,9 @@ fn main() {
         match agent.connect(None, None) {
             Ok(()) => {
                 let tether_thread = std::thread::spawn(move || loop {
-                    println!("Checking...");
                     if let Ok(msg) = tether_rx.recv() {
                         debug!("Tether Thread received message via Model: {:?}", msg);
                     }
-                    // std::thread::sleep(Duration::from_millis(500));
                 });
                 handles.push(tether_thread);
             }
@@ -73,9 +74,8 @@ fn main() {
 
     for port in cli.midi_ports {
         let midi_tx = midi_tx.clone();
-        let midi_thread = std::thread::spawn(move || match get_midi_input(port, midi_tx) {
-            Ok(_) => (),
-            Err(err) => error!("MIDI port Error: {}", err),
+        let midi_thread = std::thread::spawn(move || {
+            listen_for_midi(port, midi_tx);
         });
         handles.push(midi_thread);
     }
@@ -98,7 +98,7 @@ fn main() {
         eframe::run_native(
             "My egui App",
             options,
-            Box::new(|_cc| Box::<Model>::new(model)),
+            Box::new(|_cc| Box::<MediationDataModel>::new(model)),
         )
         .expect("Failed to launch GUI");
         info!("GUI ended; exit now...");
@@ -106,118 +106,7 @@ fn main() {
     }
 }
 
-fn get_midi_input(preferred_port: usize, tx: mpsc::Sender<MidiMsg>) -> Result<(), Box<dyn Error>> {
-    let mut input = String::new();
-
-    let mut midi_in = MidiInput::new("midir reading input")?;
-    midi_in.ignore(Ignore::None);
-
-    // Get an input port (read from console if multiple are available)
-    let in_ports = midi_in.ports();
-    let in_port = match in_ports.len() {
-        0 => return Err("no input port found".into()),
-        1 => {
-            warn!(
-                "Choosing the only available input port: {}",
-                midi_in.port_name(&in_ports[0]).unwrap()
-            );
-            &in_ports[0]
-        }
-        _ => {
-            debug!("Available input ports:");
-            for (i, p) in in_ports.iter().enumerate() {
-                info!("{}: {}", i, midi_in.port_name(p).unwrap());
-            }
-            in_ports.get(preferred_port).ok_or("invalid port")?
-        }
-    };
-
-    let in_port_name = midi_in.port_name(in_port)?;
-
-    let mut ctx = ReceiverContext::new();
-    // _conn_in needs to be a named parameter, because it needs to be kept alive until the end of the scope
-    let _conn_in = midi_in.connect(
-        in_port,
-        "midir-read-input",
-        move |_stamp, midi_bytes, _| {
-            let (msg, _len) =
-                MidiMsg::from_midi_with_context(&midi_bytes, &mut ctx).expect("Not an error");
-
-            tx.send(msg).expect("failed to send on MIDI thread");
-        },
-        (),
-    )?;
-
-    info!(
-        "MIDI connection open, reading input from '{}'.",
-        in_port_name
-    );
-
-    input.clear();
-    stdin().read_line(&mut input)?; // wait for next enter key press
-
-    warn!("Closing connection");
-    Ok(())
-}
-
-struct Model {
-    last_msg_received: String,
-    midi_rx: Receiver<MidiMsg>,
-    tether_tx: Sender<MidiMsg>,
-}
-
-impl Model {
-    pub fn new(midi_rx: Receiver<MidiMsg>, tether_tx: Sender<MidiMsg>) -> Self {
-        Model {
-            midi_rx,
-            tether_tx,
-            last_msg_received: "".to_owned(),
-        }
-    }
-
-    pub fn handle_incoming_midi(&mut self, msg: &MidiMsg) {
-        self.last_msg_received = format!("{:?}", msg);
-        match self.tether_tx.send(msg.clone()) {
-            Ok(()) => {}
-            Err(e) => {
-                error!("tether_tx SendError: {}", e);
-            }
-        }
-
-        // match msg {
-        //     MidiMsg::ChannelVoice { channel, msg } => {
-        //         debug!("Channel {:?}, msg: {:?}", channel, msg);
-        //         match msg {
-        //             midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => {
-        //                 debug!("NoteOn {}, @ {}", note, velocity);
-        //             }
-        //             midi_msg::ChannelVoiceMsg::NoteOff { note, velocity } => {
-        //                 debug!("NoteOff {}, @ {}", note, velocity);
-        //             }
-        //             midi_msg::ChannelVoiceMsg::ControlChange { control } => {
-        //                 debug!("ControlChange message: {:?}", control);
-        //                 match control {
-        //                     ControlChange::Undefined { control, value } => {
-        //                         debug!("'Undefined' control change message: control = {control}, value = {value}");
-        //                     }
-        //                     _ => {
-        //                         warn!("This type of ControlChange message not handled (yet)");
-        //                     }
-        //                 }
-        //             }
-        //             _ => {
-        //                 warn!("This type of ChannelVoiceMessage not handled (yet)");
-        //             }
-        //         }
-        //     }
-        //     _ => {
-        //         debug!("unhandled midi message: {:?}", msg);
-        //     }
-        // }
-    }
-}
-
-impl eframe::App for Model {
+impl eframe::App for MediationDataModel {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // TODO: continuous mode essential?
         ctx.request_repaint();
