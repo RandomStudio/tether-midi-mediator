@@ -5,6 +5,7 @@ use std::{
 
 use clap::Parser;
 use eframe::egui;
+use egui::{Color32, RichText};
 use env_logger::Env;
 use log::{debug, info, warn};
 use mediation::MediationDataModel;
@@ -101,12 +102,17 @@ impl eframe::App for MediationDataModel {
             for (_key, info) in self.port_info.iter() {
                 ui.horizontal(|ui| {
                     ui.label(&format!("{} :{}", info.index, info.full_name));
-                    let elapsed = info
-                        .last_received
-                        .elapsed()
-                        .unwrap_or(Duration::ZERO)
-                        .as_secs();
-                    ui.label(&format!("{}s ago", elapsed));
+                    if let Ok(elapsed) = info.last_received.elapsed() {
+                        let color = if elapsed > Duration::from_secs(3) {
+                            Color32::RED
+                        } else {
+                            Color32::GREEN
+                        };
+                        ui.label(
+                            RichText::new(&format!("{:.1}s ago", elapsed.as_secs_f32()))
+                                .color(color),
+                        );
+                    }
                 });
             }
         });
