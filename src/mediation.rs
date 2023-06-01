@@ -1,7 +1,7 @@
 use std::sync::mpsc::{Receiver, Sender};
 
-use log::{debug, error, warn};
-use midi_msg::{ControlChange, MidiMsg};
+use log::{debug, warn};
+use midi_msg::{Channel, ControlChange, MidiMsg};
 
 use serde::Serialize;
 use tether_agent::rmp_serde::to_vec_named;
@@ -59,7 +59,7 @@ impl MediationDataModel {
                     midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => {
                         self.tether_tx
                             .send(TetherMidiMessage::NoteOn(TetherNoteOnPayload {
-                                channel: 1,
+                                channel: channel_to_int(*channel),
                                 note: *note,
                                 velocity: *velocity,
                             }))
@@ -76,7 +76,7 @@ impl MediationDataModel {
                                 self.tether_tx
                                     .send(TetherMidiMessage::ControlChange(
                                         TetherControlChangePayload {
-                                            channel: 1,
+                                            channel: channel_to_int(*channel),
                                             controller: *control,
                                             value: *value,
                                         },
@@ -98,5 +98,26 @@ impl MediationDataModel {
                 debug!("unhandled midi message: {:?}", msg);
             }
         }
+    }
+}
+
+fn channel_to_int(channel: Channel) -> u8 {
+    match channel {
+        Channel::Ch1 => 1,
+        Channel::Ch2 => 2,
+        Channel::Ch3 => 3,
+        Channel::Ch4 => 4,
+        Channel::Ch5 => 5,
+        Channel::Ch6 => 6,
+        Channel::Ch7 => 7,
+        Channel::Ch8 => 8,
+        Channel::Ch9 => 9,
+        Channel::Ch10 => 10,
+        Channel::Ch11 => 11,
+        Channel::Ch12 => 12,
+        Channel::Ch13 => 13,
+        Channel::Ch14 => 14,
+        Channel::Ch15 => 15,
+        Channel::Ch16 => 16,
     }
 }

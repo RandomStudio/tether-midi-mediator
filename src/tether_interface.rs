@@ -1,8 +1,6 @@
 use std::{sync::mpsc::Receiver, thread::JoinHandle};
 
 use log::{debug, error};
-use midi_msg::MidiMsg;
-use serde::Serialize;
 use tether_agent::TetherAgent;
 
 use crate::mediation::TetherMidiMessage;

@@ -6,7 +6,7 @@ use std::{
 use clap::{command, Parser};
 use eframe::egui;
 use env_logger::Env;
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use mediation::MediationDataModel;
 use midi_interface::listen_for_midi;
 use tether_interface::start_tether_agent;
