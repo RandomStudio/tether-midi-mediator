@@ -26,7 +26,7 @@ pub fn start_tether_agent(
     let agent = TetherAgent::new(
         &settings.role,
         if let Some(override_id) = &settings.id {
-            Some(&override_id)
+            Some(override_id)
         } else {
             None
         },
@@ -36,7 +36,7 @@ pub fn start_tether_agent(
         Ok(()) => {
             tx.send((
                 agent.is_connected(),
-                settings.clone(),
+                settings,
                 Some(String::from(agent.broker_uri())),
             ))
             .expect("failed to send state");
@@ -53,7 +53,7 @@ pub fn start_tether_agent(
             let raw_output = agent
                 .create_output_plug("raw", None, None)
                 .expect("failed to create output plug");
-            let tether_thread = std::thread::spawn(move || loop {
+            std::thread::spawn(move || loop {
                 if let Ok(msg) = rx.recv() {
                     debug!("Tether Thread received message via Model: {:?}", &msg);
                     match msg {
@@ -75,11 +75,10 @@ pub fn start_tether_agent(
                         }
                     }
                 }
-            });
-            tether_thread
+            })
         }
         Err(e) => {
-            tx.send((false, settings.clone(), None))
+            tx.send((false, settings, None))
                 .expect("failed to send state");
 
             error!("Error connecting Tether Agent: {e}");

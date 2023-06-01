@@ -76,7 +76,7 @@ fn main() {
                     &midi_input_port,
                     "midir-read-input",
                     move |_timestamp, midi_bytes, _| {
-                        let (msg, _len) = MidiMsg::from_midi_with_context(&midi_bytes, &mut ctx)
+                        let (msg, _len) = MidiMsg::from_midi_with_context(midi_bytes, &mut ctx)
                             .expect("Not an error");
 
                         // Handle everything but spammy clock messages.

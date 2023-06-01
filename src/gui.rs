@@ -29,7 +29,7 @@ pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
                 } else {
                     Color32::GREEN
                 };
-                ui.label(RichText::new(&format!("{:.0}s ago", elapsed.as_secs_f32())).color(color));
+                ui.label(RichText::new(format!("{:.0}s ago", elapsed.as_secs_f32())).color(color));
             }
         });
     }
