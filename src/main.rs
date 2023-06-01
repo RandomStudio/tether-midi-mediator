@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     io::stdin,
-    sync::mpsc::{self, Receiver},
+    sync::mpsc::{self, Receiver, Sender},
     time::Duration,
 };
 
@@ -11,6 +11,7 @@ use env_logger::Env;
 use log::{debug, error, info, warn};
 use midi_msg::{ControlChange, MidiMsg, ReceiverContext};
 use midir::{Ignore, MidiInput};
+use tether_agent::TetherAgent;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -18,8 +19,14 @@ pub struct Cli {
     #[arg(long = "loglevel",default_value_t=String::from("info"))]
     log_level: String,
 
+    /// Flag to enable headless (no GUI) mode, suitable for server-type
+    /// process
     #[arg(long = "headless")]
     headless_mode: bool,
+
+    /// Flag to disable Tether connection
+    #[arg(long = "tether.disable")]
+    tether_disable: bool,
 
     /// Specify one or more MIDI ports by index, in any order
     #[clap()]
@@ -28,14 +35,44 @@ pub struct Cli {
 
 fn main() {
     let cli = Cli::parse();
-    env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level)).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level))
+        .filter_module("paho_mqtt", log::LevelFilter::Warn)
+        .filter_module("egui_glow", log::LevelFilter::Warn)
+        .filter_module("egui_winit", log::LevelFilter::Warn)
+        .filter_module("eframe", log::LevelFilter::Warn)
+        .init();
 
     let mut handles = Vec::new();
 
-    let (tx, rx) = mpsc::channel();
+    let (midi_tx, midi_rx) = mpsc::channel();
+    let (tether_tx, tether_rx) = mpsc::channel();
+
+    let mut model = Model::new(midi_rx, tether_tx);
+
+    if cli.tether_disable {
+        warn!("Tether connection disabled; local-mode only");
+    } else {
+        let agent = TetherAgent::new("midi", None, None);
+        match agent.connect(None, None) {
+            Ok(()) => {
+                let tether_thread = std::thread::spawn(move || loop {
+                    println!("Checking...");
+                    if let Ok(msg) = tether_rx.recv() {
+                        debug!("Tether Thread received message via Model: {:?}", msg);
+                    }
+                    // std::thread::sleep(Duration::from_millis(500));
+                });
+                handles.push(tether_thread);
+            }
+            Err(e) => {
+                error!("Error connecting Tether Agent: {e}");
+                panic!("Could not connect Tether");
+            }
+        }
+    }
 
     for port in cli.midi_ports {
-        let midi_tx = tx.clone();
+        let midi_tx = midi_tx.clone();
         let midi_thread = std::thread::spawn(move || match get_midi_input(port, midi_tx) {
             Ok(_) => (),
             Err(err) => error!("MIDI port Error: {}", err),
@@ -43,13 +80,11 @@ fn main() {
         handles.push(midi_thread);
     }
 
-    let mut model = Model::new(rx);
-
     if cli.headless_mode {
         info!("Running in headless mode; Ctrl+C to quit");
         loop {
-            while let Ok(msg) = &model.rx.try_recv() {
-                model.handle_incoming_midi(&msg);
+            while let Ok(msg) = &model.midi_rx.try_recv() {
+                model.handle_incoming_midi(msg);
                 debug!("Last received message: {}", &model.last_msg_received);
             }
             std::thread::sleep(Duration::from_millis(1));
@@ -104,11 +139,11 @@ fn get_midi_input(preferred_port: usize, tx: mpsc::Sender<MidiMsg>) -> Result<()
     let _conn_in = midi_in.connect(
         in_port,
         "midir-read-input",
-        move |stamp, midi_bytes, _| {
+        move |_stamp, midi_bytes, _| {
             let (msg, _len) =
                 MidiMsg::from_midi_with_context(&midi_bytes, &mut ctx).expect("Not an error");
 
-            tx.send(msg);
+            tx.send(msg).expect("failed to send on MIDI thread");
         },
         (),
     )?;
@@ -127,49 +162,58 @@ fn get_midi_input(preferred_port: usize, tx: mpsc::Sender<MidiMsg>) -> Result<()
 
 struct Model {
     last_msg_received: String,
-    rx: Receiver<MidiMsg>,
+    midi_rx: Receiver<MidiMsg>,
+    tether_tx: Sender<MidiMsg>,
 }
 
 impl Model {
-    pub fn new(rx: Receiver<MidiMsg>) -> Self {
+    pub fn new(midi_rx: Receiver<MidiMsg>, tether_tx: Sender<MidiMsg>) -> Self {
         Model {
-            rx,
+            midi_rx,
+            tether_tx,
             last_msg_received: "".to_owned(),
         }
     }
 
     pub fn handle_incoming_midi(&mut self, msg: &MidiMsg) {
         self.last_msg_received = format!("{:?}", msg);
-        match msg {
-            MidiMsg::ChannelVoice { channel, msg } => {
-                debug!("Channel {:?}, msg: {:?}", channel, msg);
-                match msg {
-                    midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => {
-                        debug!("NoteOn {}, @ {}", note, velocity);
-                    }
-                    midi_msg::ChannelVoiceMsg::NoteOff { note, velocity } => {
-                        debug!("NoteOff {}, @ {}", note, velocity);
-                    }
-                    midi_msg::ChannelVoiceMsg::ControlChange { control } => {
-                        debug!("ControlChange message: {:?}", control);
-                        match control {
-                            ControlChange::Undefined { control, value } => {
-                                debug!("'Undefined' control change message: control = {control}, value = {value}");
-                            }
-                            _ => {
-                                warn!("This type of ControlChange message not handled (yet)");
-                            }
-                        }
-                    }
-                    _ => {
-                        warn!("This type of ChannelVoiceMessage not handled (yet)");
-                    }
-                }
-            }
-            _ => {
-                debug!("unhandled midi message: {:?}", msg);
+        match self.tether_tx.send(msg.clone()) {
+            Ok(()) => {}
+            Err(e) => {
+                error!("tether_tx SendError: {}", e);
             }
         }
+
+        // match msg {
+        //     MidiMsg::ChannelVoice { channel, msg } => {
+        //         debug!("Channel {:?}, msg: {:?}", channel, msg);
+        //         match msg {
+        //             midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => {
+        //                 debug!("NoteOn {}, @ {}", note, velocity);
+        //             }
+        //             midi_msg::ChannelVoiceMsg::NoteOff { note, velocity } => {
+        //                 debug!("NoteOff {}, @ {}", note, velocity);
+        //             }
+        //             midi_msg::ChannelVoiceMsg::ControlChange { control } => {
+        //                 debug!("ControlChange message: {:?}", control);
+        //                 match control {
+        //                     ControlChange::Undefined { control, value } => {
+        //                         debug!("'Undefined' control change message: control = {control}, value = {value}");
+        //                     }
+        //                     _ => {
+        //                         warn!("This type of ControlChange message not handled (yet)");
+        //                     }
+        //                 }
+        //             }
+        //             _ => {
+        //                 warn!("This type of ChannelVoiceMessage not handled (yet)");
+        //             }
+        //         }
+        //     }
+        //     _ => {
+        //         debug!("unhandled midi message: {:?}", msg);
+        //     }
+        // }
     }
 }
 
@@ -184,9 +228,9 @@ impl eframe::App for Model {
             ui.small(&self.last_msg_received);
         });
 
-        if let Ok(msg) = &self.rx.try_recv() {
+        if let Ok(msg) = &self.midi_rx.try_recv() {
             debug!("GUI received MIDI message: {:?}", msg);
-            self.handle_incoming_midi(&msg);
+            self.handle_incoming_midi(msg);
             // TODO: is this the right place to add a delay?
             std::thread::sleep(Duration::from_millis(1));
         }
