@@ -9,8 +9,11 @@ pub fn start_tether_agent(rx: Receiver<TetherMidiMessage>) -> JoinHandle<()> {
     let agent = TetherAgent::new("midi", None, None);
     match agent.connect(None, None) {
         Ok(()) => {
-            let notes_output = agent
-                .create_output_plug("notes", None, None)
+            let note_on_output = agent
+                .create_output_plug("notesOn", None, None)
+                .expect("failed to create output plug");
+            let note_off_output = agent
+                .create_output_plug("notesOff", None, None)
                 .expect("failed to create output plug");
             let cc_output = agent
                 .create_output_plug("controlChange", None, None)
@@ -29,8 +32,15 @@ pub fn start_tether_agent(rx: Receiver<TetherMidiMessage>) -> JoinHandle<()> {
                         TetherMidiMessage::ControlChange(cc_payload) => {
                             agent.encode_and_publish(&cc_output, cc_payload).unwrap();
                         }
-                        TetherMidiMessage::NoteOn(nn_payload) => {
-                            agent.encode_and_publish(&notes_output, nn_payload).unwrap();
+                        TetherMidiMessage::NoteOn(n_payload) => {
+                            agent
+                                .encode_and_publish(&note_on_output, n_payload)
+                                .unwrap();
+                        }
+                        TetherMidiMessage::NoteOff(n_payload) => {
+                            agent
+                                .encode_and_publish(&note_off_output, n_payload)
+                                .unwrap();
                         }
                     }
                 }

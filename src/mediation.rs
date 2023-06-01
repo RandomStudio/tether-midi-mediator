@@ -7,8 +7,7 @@ use serde::Serialize;
 use tether_agent::rmp_serde::to_vec_named;
 
 #[derive(Serialize, Debug)]
-// #[serde(rename_all = "camelCase")]
-pub struct TetherNoteOnPayload {
+pub struct TetherNotePayload {
     pub channel: u8,
     pub note: u8,
     pub velocity: u8,
@@ -25,7 +24,8 @@ pub struct TetherControlChangePayload {
 pub enum TetherMidiMessage {
     /// Already-encoded payload
     Raw(Vec<u8>),
-    NoteOn(TetherNoteOnPayload),
+    NoteOn(TetherNotePayload),
+    NoteOff(TetherNotePayload),
     ControlChange(TetherControlChangePayload),
 }
 
@@ -58,7 +58,7 @@ impl MediationDataModel {
                 match msg {
                     midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => {
                         self.tether_tx
-                            .send(TetherMidiMessage::NoteOn(TetherNoteOnPayload {
+                            .send(TetherMidiMessage::NoteOn(TetherNotePayload {
                                 channel: channel_to_int(*channel),
                                 note: *note,
                                 velocity: *velocity,
@@ -67,6 +67,13 @@ impl MediationDataModel {
                         debug!("NoteOn {}, @ {}", note, velocity);
                     }
                     midi_msg::ChannelVoiceMsg::NoteOff { note, velocity } => {
+                        self.tether_tx
+                            .send(TetherMidiMessage::NoteOff(TetherNotePayload {
+                                channel: channel_to_int(*channel),
+                                note: *note,
+                                velocity: *velocity,
+                            }))
+                            .unwrap();
                         debug!("NoteOff {}, @ {}", note, velocity);
                     }
                     midi_msg::ChannelVoiceMsg::ControlChange { control } => {
