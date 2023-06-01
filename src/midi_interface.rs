@@ -4,7 +4,9 @@ use log::{debug, info, warn};
 use midi_msg::{MidiMsg, ReceiverContext};
 use midir::{Ignore, MidiInput};
 
-pub fn listen_for_midi(preferred_port: usize, tx: mpsc::Sender<MidiMsg>) {
+use crate::mediation::MidiReceiverPayload;
+
+pub fn listen_for_midi(preferred_port: usize, tx: mpsc::Sender<MidiReceiverPayload>) {
     let mut midi_in = MidiInput::new("midir reading input").expect("midir failure");
     midi_in.ignore(Ignore::None);
 
@@ -39,7 +41,8 @@ pub fn listen_for_midi(preferred_port: usize, tx: mpsc::Sender<MidiMsg>) {
             let (msg, _len) =
                 MidiMsg::from_midi_with_context(&midi_bytes, &mut ctx).expect("Not an error");
 
-            tx.send(msg).expect("failed to send on MIDI thread");
+            tx.send((preferred_port, msg))
+                .expect("failed to send on MIDI thread");
         },
         (),
     );

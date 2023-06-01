@@ -39,15 +39,20 @@ pub struct PortInformation {
     pub last_received: SystemTime,
 }
 
+pub type MidiReceiverPayload = (usize, MidiMsg);
+
 pub struct MediationDataModel {
     pub last_msg_received: String,
-    pub midi_rx: Receiver<MidiMsg>,
+    pub midi_rx: Receiver<MidiReceiverPayload>,
     pub tether_tx: Sender<TetherMidiMessage>,
     pub port_info: HashMap<String, PortInformation>,
 }
 
 impl MediationDataModel {
-    pub fn new(midi_rx: Receiver<MidiMsg>, tether_tx: Sender<TetherMidiMessage>) -> Self {
+    pub fn new(
+        midi_rx: Receiver<MidiReceiverPayload>,
+        tether_tx: Sender<TetherMidiMessage>,
+    ) -> Self {
         MediationDataModel {
             midi_rx,
             tether_tx,
@@ -58,10 +63,10 @@ impl MediationDataModel {
 
     pub fn add_port(&mut self, index: usize) {
         // let shortened_name = full_name.replace(" ", "_").trim().to_lowercase();
-        let shortened_name = format!("port #{}", index);
+        let port_key = format!("{index}");
         let full_name = String::from("unknown");
         self.port_info.insert(
-            shortened_name,
+            port_key,
             PortInformation {
                 index,
                 full_name,
@@ -70,7 +75,7 @@ impl MediationDataModel {
         );
     }
 
-    pub fn handle_incoming_midi(&mut self, msg: &MidiMsg) {
+    pub fn handle_incoming_midi(&mut self, port_index: usize, msg: &MidiMsg) {
         let raw_message_string = format!("{:?}", msg);
         let raw_payload = to_vec_named(&raw_message_string).expect("failed to encode raw payload");
         self.last_msg_received = raw_message_string.to_owned();
@@ -129,6 +134,15 @@ impl MediationDataModel {
             }
             _ => {
                 debug!("unhandled midi message: {:?}", msg);
+            }
+        }
+        self.update_port_info(port_index);
+    }
+
+    fn update_port_info(&mut self, index: usize) {
+        for (key, info) in self.port_info.iter_mut() {
+            if key.eq(&format!("{index}")) {
+                info.last_received = SystemTime::now();
             }
         }
     }
