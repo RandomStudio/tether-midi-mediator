@@ -20,6 +20,11 @@ mod tether_interface;
 
 fn main() {
     let cli = Cli::parse();
+
+    if cli.midi_ports.is_empty() {
+        panic!("You must provide at least one MIDI port index(es), e.g. \"./tether-midi-mediator 1 2\"")
+    }
+
     env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level))
         .filter_module("paho_mqtt", log::LevelFilter::Warn)
         .filter_module("egui_glow", log::LevelFilter::Warn)
