@@ -5,6 +5,17 @@ use egui::{Color32, RichText};
 use crate::mediation::{MediationDataModel, MONITOR_LOG_LENGTH};
 
 pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
+    ui.heading("Tether Agent");
+    if model.tether_connected {
+        ui.label(RichText::new("Connected").color(Color32::GREEN));
+        if let Some(uri) = &model.tether_uri {
+            ui.label(uri);
+        }
+    } else {
+        ui.label(RichText::new("Not connected").color(Color32::RED));
+    }
+    ui.separator();
+
     ui.heading("MIDI Ports Connected");
 
     for (_key, info) in model.port_info.iter() {
@@ -18,7 +29,7 @@ pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
                 } else {
                     Color32::GREEN
                 };
-                ui.label(RichText::new(&format!("{:.1}s ago", elapsed.as_secs_f32())).color(color));
+                ui.label(RichText::new(&format!("{:.0}s ago", elapsed.as_secs_f32())).color(color));
             }
         });
     }

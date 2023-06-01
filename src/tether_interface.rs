@@ -1,10 +1,14 @@
-use std::{sync::mpsc::Receiver, thread::JoinHandle};
+use std::{
+    sync::mpsc::{Receiver, Sender},
+    thread::JoinHandle,
+};
 
 use log::{debug, error};
 use tether_agent::TetherAgent;
 
 use crate::mediation::TetherMidiMessage;
 
+#[derive(Clone)]
 pub struct TetherSettings {
     pub host: std::net::IpAddr,
     pub username: Option<String>,
@@ -12,8 +16,11 @@ pub struct TetherSettings {
     pub role: String,
     pub id: Option<String>,
 }
+
+pub type TetherStateMessage = (bool, TetherSettings, Option<String>);
 pub fn start_tether_agent(
     rx: Receiver<TetherMidiMessage>,
+    tx: Sender<TetherStateMessage>,
     settings: TetherSettings,
 ) -> JoinHandle<()> {
     let agent = TetherAgent::new(
@@ -27,6 +34,13 @@ pub fn start_tether_agent(
     );
     match agent.connect(None, None) {
         Ok(()) => {
+            tx.send((
+                agent.is_connected(),
+                settings.clone(),
+                Some(String::from(agent.broker_uri())),
+            ))
+            .expect("failed to send state");
+
             let note_on_output = agent
                 .create_output_plug("notesOn", None, None)
                 .expect("failed to create output plug");
@@ -65,6 +79,9 @@ pub fn start_tether_agent(
             tether_thread
         }
         Err(e) => {
+            tx.send((false, settings.clone(), None))
+                .expect("failed to send state");
+
             error!("Error connecting Tether Agent: {e}");
             panic!("Could not connect Tether");
         }

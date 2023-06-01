@@ -38,23 +38,27 @@ fn main() {
 
     let (midi_tx, midi_rx) = mpsc::channel();
     let (tether_tx, tether_rx) = mpsc::channel();
+    let (tether_state_tx, tether_state_rx) = mpsc::channel();
 
-    let mut model = MediationDataModel::new(midi_rx, tether_tx);
+    let tether_settings = TetherSettings {
+        host: cli.tether_host,
+        username: cli.tether_username,
+        password: cli.tether_password,
+        role: cli.tether_role,
+        id: cli.tether_id,
+    };
 
     if cli.tether_disable {
         warn!("Tether connection disabled; local-mode only");
     } else {
         handles.push(start_tether_agent(
             tether_rx,
-            TetherSettings {
-                host: cli.tether_host,
-                username: cli.tether_username,
-                password: cli.tether_password,
-                role: cli.tether_role,
-                id: cli.tether_id,
-            },
+            tether_state_tx,
+            tether_settings,
         ));
     }
+
+    let mut model = MediationDataModel::new(midi_rx, tether_tx, tether_state_rx);
 
     for port in cli.midi_ports {
         let mut midi_input = MidiInput::new("midir reading input").expect("midir failure");
@@ -139,6 +143,11 @@ impl eframe::App for MediationDataModel {
         egui::CentralPanel::default().show(ctx, |ui| {
             render_gui(self, ui);
         });
+
+        if let Ok((is_connected, _settings_used, broker_uri)) = &self.tether_state_rx.try_recv() {
+            self.tether_connected = *is_connected;
+            self.tether_uri = broker_uri.clone();
+        }
 
         if let Ok((port_index, msg)) = &self.midi_rx.try_recv() {
             debug!("GUI received MIDI message: {:?}", msg);

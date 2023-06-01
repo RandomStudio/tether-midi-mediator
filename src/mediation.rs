@@ -11,6 +11,8 @@ use midi_msg::{Channel, ControlChange, MidiMsg};
 use serde::Serialize;
 use tether_agent::rmp_serde::to_vec_named;
 
+use crate::tether_interface::TetherStateMessage;
+
 #[derive(Serialize, Debug)]
 pub struct TetherNotePayload {
     pub channel: u8,
@@ -48,18 +50,25 @@ pub struct MediationDataModel {
     pub midi_rx: Receiver<MidiReceiverPayload>,
     pub tether_tx: Sender<TetherMidiMessage>,
     pub port_info: HashMap<String, PortInformation>,
+    pub tether_connected: bool,
+    pub tether_uri: Option<String>,
+    pub tether_state_rx: Receiver<TetherStateMessage>,
 }
 
 impl MediationDataModel {
     pub fn new(
         midi_rx: Receiver<MidiReceiverPayload>,
         tether_tx: Sender<TetherMidiMessage>,
+        tether_state_rx: Receiver<TetherStateMessage>,
     ) -> Self {
         MediationDataModel {
             midi_rx,
             tether_tx,
             message_log: CircularBuffer::new(),
             port_info: HashMap::new(),
+            tether_state_rx,
+            tether_connected: false,
+            tether_uri: None,
         }
     }
 
