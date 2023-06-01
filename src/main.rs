@@ -6,8 +6,7 @@ use env_logger::Env;
 use gui::render_gui;
 use log::{debug, info, warn};
 use mediation::MediationDataModel;
-use midi_interface::get_midi_connection;
-use midi_msg::{MidiMsg, ReceiverContext, SystemRealTimeMsg};
+use midi_interface::{get_midi_connection, midi_listener_thread};
 use midir::{Ignore, MidiInput};
 use settings::Cli;
 use tether_interface::{start_tether_agent, TetherSettings};
@@ -68,41 +67,12 @@ fn main() {
         let (midi_input_port, port_name) =
             get_midi_connection(&midi_input, port).expect("failed to open MIDI port");
         model.add_port(port, port_name);
-        let midi_thread = std::thread::spawn(move || {
-            let mut ctx = ReceiverContext::new();
-
-            let _connection = midi_input
-                .connect(
-                    &midi_input_port,
-                    "midir-read-input",
-                    move |_timestamp, midi_bytes, _| {
-                        let (msg, _len) = MidiMsg::from_midi_with_context(midi_bytes, &mut ctx)
-                            .expect("Not an error");
-
-                        // Handle everything but spammy clock messages.
-                        if let MidiMsg::SystemRealTime {
-                            msg: SystemRealTimeMsg::TimingClock,
-                        } = msg
-                        {
-                            // no-op
-                        } else {
-                            midi_tx
-                                .send((port, msg))
-                                .expect("failed to send on channel");
-                            // println!("{}: {:?}", stamp, msg);
-                        }
-                    },
-                    (),
-                )
-                .expect("failed to connect port");
-
-            // TODO: this thread should end when required
-            loop {
-                std::thread::sleep(Duration::from_millis(1));
-            }
-            //     listen_for_midi(port, midi_tx);
-        });
-        handles.push(midi_thread);
+        handles.push(midi_listener_thread(
+            midi_input,
+            midi_input_port,
+            midi_tx,
+            port,
+        ));
     }
 
     // for handle in handles {
