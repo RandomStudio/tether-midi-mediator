@@ -47,7 +47,7 @@ fn main() {
     let mut model = Model::new(rx);
 
     if cli.headless_mode {
-        info!("Running in headless mode; no graphic output");
+        info!("Running in headless mode; Ctrl+C to quit");
         loop {
             while let Ok(msg) = &model.rx.try_recv() {
                 model.handle_incoming_midi(&msg);
@@ -56,7 +56,7 @@ fn main() {
             std::thread::sleep(Duration::from_millis(1));
         }
     } else {
-        info!("Running graphics mode");
+        info!("Running graphics mode; close the window to quit");
         let options = eframe::NativeOptions {
             // initial_window_size: Some(egui::vec2(320.0, 240.0)),
             ..Default::default()
