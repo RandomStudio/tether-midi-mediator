@@ -28,8 +28,12 @@ pub fn start_tether_agent(rx: Receiver<TetherMidiMessage>) -> JoinHandle<()> {
                         TetherMidiMessage::Raw(payload) => {
                             agent.publish(&raw_output, Some(&payload)).unwrap()
                         }
-                        TetherMidiMessage::ControlChange(cc_payload) => {}
-                        TetherMidiMessage::NoteOn(nn_payload) => {}
+                        TetherMidiMessage::ControlChange(cc_payload) => {
+                            agent.encode_and_publish(&cc_output, cc_payload).unwrap();
+                        }
+                        TetherMidiMessage::NoteOn(nn_payload) => {
+                            agent.encode_and_publish(&notes_output, nn_payload).unwrap();
+                        }
                     }
                 }
             });

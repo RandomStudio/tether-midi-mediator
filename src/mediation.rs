@@ -1,7 +1,7 @@
 use std::sync::mpsc::{Receiver, Sender};
 
-use log::error;
-use midi_msg::MidiMsg;
+use log::{debug, error, warn};
+use midi_msg::{ControlChange, MidiMsg};
 
 use serde::Serialize;
 use tether_agent::rmp_serde::to_vec_named;
@@ -52,35 +52,51 @@ impl MediationDataModel {
             .send(TetherMidiMessage::Raw(raw_payload))
             .unwrap();
 
-        // match msg {
-        //     MidiMsg::ChannelVoice { channel, msg } => {
-        //         debug!("Channel {:?}, msg: {:?}", channel, msg);
-        //         match msg {
-        //             midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => {
-        //                 debug!("NoteOn {}, @ {}", note, velocity);
-        //             }
-        //             midi_msg::ChannelVoiceMsg::NoteOff { note, velocity } => {
-        //                 debug!("NoteOff {}, @ {}", note, velocity);
-        //             }
-        //             midi_msg::ChannelVoiceMsg::ControlChange { control } => {
-        //                 debug!("ControlChange message: {:?}", control);
-        //                 match control {
-        //                     ControlChange::Undefined { control, value } => {
-        //                         debug!("'Undefined' control change message: control = {control}, value = {value}");
-        //                     }
-        //                     _ => {
-        //                         warn!("This type of ControlChange message not handled (yet)");
-        //                     }
-        //                 }
-        //             }
-        //             _ => {
-        //                 warn!("This type of ChannelVoiceMessage not handled (yet)");
-        //             }
-        //         }
-        //     }
-        //     _ => {
-        //         debug!("unhandled midi message: {:?}", msg);
-        //     }
-        // }
+        match msg {
+            MidiMsg::ChannelVoice { channel, msg } => {
+                debug!("Channel {:?}, msg: {:?}", channel, msg);
+                match msg {
+                    midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => {
+                        self.tether_tx
+                            .send(TetherMidiMessage::NoteOn(TetherNoteOnPayload {
+                                channel: 1,
+                                note: *note,
+                                velocity: *velocity,
+                            }))
+                            .unwrap();
+                        debug!("NoteOn {}, @ {}", note, velocity);
+                    }
+                    midi_msg::ChannelVoiceMsg::NoteOff { note, velocity } => {
+                        debug!("NoteOff {}, @ {}", note, velocity);
+                    }
+                    midi_msg::ChannelVoiceMsg::ControlChange { control } => {
+                        debug!("ControlChange message: {:?}", control);
+                        match control {
+                            ControlChange::Undefined { control, value } => {
+                                self.tether_tx
+                                    .send(TetherMidiMessage::ControlChange(
+                                        TetherControlChangePayload {
+                                            channel: 1,
+                                            controller: *control,
+                                            value: *value,
+                                        },
+                                    ))
+                                    .unwrap();
+                                debug!("'Undefined' control change message: control = {control}, value = {value}");
+                            }
+                            _ => {
+                                warn!("This type of ControlChange message not handled (yet)");
+                            }
+                        }
+                    }
+                    _ => {
+                        warn!("This type of ChannelVoiceMessage not handled (yet)");
+                    }
+                }
+            }
+            _ => {
+                debug!("unhandled midi message: {:?}", msg);
+            }
+        }
     }
 }
