@@ -1,20 +1,18 @@
-use std::{
-    sync::mpsc::{self},
-    time::Duration,
-};
+use std::{sync::mpsc, time::Duration};
 
 use clap::Parser;
 use eframe::egui;
-use egui::{Color32, RichText};
 use env_logger::Env;
+use gui::render_gui;
 use log::{debug, info, warn};
-use mediation::{MediationDataModel, MONITOR_LOG_LENGTH};
+use mediation::MediationDataModel;
 use midi_interface::get_midi_connection;
 use midi_msg::{MidiMsg, ReceiverContext, SystemRealTimeMsg};
 use midir::{Ignore, MidiInput};
 use settings::Cli;
 use tether_interface::{start_tether_agent, TetherSettings};
 
+mod gui;
 mod mediation;
 mod midi_interface;
 mod settings;
@@ -134,45 +132,7 @@ impl eframe::App for MediationDataModel {
         ctx.request_repaint();
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("MIDI Ports Connected");
-
-            for (_key, info) in self.port_info.iter() {
-                ui.horizontal(|ui| {
-                    ui.label(&format!("PORT #{}: \"{}\"", info.index, info.full_name));
-                    if let Ok(elapsed) = info.last_received.elapsed() {
-                        let color = if elapsed > Duration::from_secs(5) {
-                            Color32::RED
-                        } else if elapsed > Duration::from_secs(1) {
-                            Color32::LIGHT_YELLOW
-                        } else {
-                            Color32::GREEN
-                        };
-                        ui.label(
-                            RichText::new(&format!("{:.1}s ago", elapsed.as_secs_f32()))
-                                .color(color),
-                        );
-                    }
-                });
-            }
-
-            ui.separator();
-
-            ui.heading(&format!(
-                "Last {} (max) messages received",
-                MONITOR_LOG_LENGTH
-            ));
-
-            if self.message_log.is_empty() {
-                ui.label("Nothing received yet");
-            } else {
-                egui::ScrollArea::vertical()
-                    .auto_shrink([true; 2])
-                    .show(ui, |ui| {
-                        for item in self.message_log.iter().rev() {
-                            ui.label(item);
-                        }
-                    });
-            }
+            render_gui(self, ui);
         });
 
         if let Ok((port_index, msg)) = &self.midi_rx.try_recv() {
