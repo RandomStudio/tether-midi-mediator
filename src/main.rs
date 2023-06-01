@@ -52,6 +52,7 @@ fn main() {
 
     for port in cli.midi_ports {
         let midi_tx = midi_tx.clone();
+        model.add_port(port);
         let midi_thread = std::thread::spawn(move || {
             listen_for_midi(port, midi_tx);
         });
@@ -74,7 +75,7 @@ fn main() {
             ..Default::default()
         };
         eframe::run_native(
-            "My egui App",
+            "Tether MIDI Mediator",
             options,
             Box::new(|_cc| Box::<MediationDataModel>::new(model)),
         )
@@ -90,9 +91,16 @@ impl eframe::App for MediationDataModel {
         ctx.request_repaint();
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Tether Midi Mediator");
-            ui.label("Last message received:");
-            ui.small(&self.last_msg_received);
+            ui.heading("Last message received:");
+            ui.label(&self.last_msg_received);
+
+            ui.separator();
+
+            ui.heading("MIDI Ports Connected");
+
+            for (_key, info) in self.port_info.iter() {
+                ui.label(&format!("{} :{}", info.index, info.full_name));
+            }
         });
 
         if let Ok(msg) = &self.midi_rx.try_recv() {

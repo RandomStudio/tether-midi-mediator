@@ -1,4 +1,8 @@
-use std::sync::mpsc::{Receiver, Sender};
+use std::{
+    collections::HashMap,
+    sync::mpsc::{Receiver, Sender},
+    time::SystemTime,
+};
 
 use log::{debug, warn};
 use midi_msg::{Channel, ControlChange, MidiMsg};
@@ -29,10 +33,17 @@ pub enum TetherMidiMessage {
     ControlChange(TetherControlChangePayload),
 }
 
+pub struct PortInformation {
+    pub index: usize,
+    pub full_name: String,
+    pub last_received: SystemTime,
+}
+
 pub struct MediationDataModel {
     pub last_msg_received: String,
     pub midi_rx: Receiver<MidiMsg>,
     pub tether_tx: Sender<TetherMidiMessage>,
+    pub port_info: HashMap<String, PortInformation>,
 }
 
 impl MediationDataModel {
@@ -41,7 +52,22 @@ impl MediationDataModel {
             midi_rx,
             tether_tx,
             last_msg_received: "".to_owned(),
+            port_info: HashMap::new(),
         }
+    }
+
+    pub fn add_port(&mut self, index: usize) {
+        // let shortened_name = full_name.replace(" ", "_").trim().to_lowercase();
+        let shortened_name = format!("port #{}", index);
+        let full_name = String::from("unknown");
+        self.port_info.insert(
+            shortened_name,
+            PortInformation {
+                index,
+                full_name,
+                last_received: SystemTime::now(),
+            },
+        );
     }
 
     pub fn handle_incoming_midi(&mut self, msg: &MidiMsg) {
