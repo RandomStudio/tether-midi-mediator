@@ -8,7 +8,7 @@ use eframe::egui;
 use egui::{Color32, RichText};
 use env_logger::Env;
 use log::{debug, info, warn};
-use mediation::MediationDataModel;
+use mediation::{MediationDataModel, MONITOR_LOG_LENGTH};
 use midi_interface::get_midi_connection;
 use midi_msg::{MidiMsg, ReceiverContext, SystemRealTimeMsg};
 use midir::{Ignore, MidiInput};
@@ -106,8 +106,8 @@ fn main() {
         info!("Running in headless mode; Ctrl+C to quit");
         loop {
             while let Ok((port_index, msg)) = &model.midi_rx.try_recv() {
+                debug!("Last received message: {:?}", &msg);
                 model.handle_incoming_midi(*port_index, msg);
-                debug!("Last received message: {}", &model.last_msg_received);
             }
             std::thread::sleep(Duration::from_millis(1));
         }
@@ -134,16 +134,11 @@ impl eframe::App for MediationDataModel {
         ctx.request_repaint();
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Last message received:");
-            ui.label(&self.last_msg_received);
-
-            ui.separator();
-
             ui.heading("MIDI Ports Connected");
 
             for (_key, info) in self.port_info.iter() {
                 ui.horizontal(|ui| {
-                    ui.label(&format!("{} :{}", info.index, info.full_name));
+                    ui.label(&format!("PORT #{}: \"{}\"", info.index, info.full_name));
                     if let Ok(elapsed) = info.last_received.elapsed() {
                         let color = if elapsed > Duration::from_secs(5) {
                             Color32::RED
@@ -158,6 +153,25 @@ impl eframe::App for MediationDataModel {
                         );
                     }
                 });
+            }
+
+            ui.separator();
+
+            ui.heading(&format!(
+                "Last {} (max) messages received",
+                MONITOR_LOG_LENGTH
+            ));
+
+            if self.message_log.is_empty() {
+                ui.label("Nothing received yet");
+            } else {
+                egui::ScrollArea::vertical()
+                    .auto_shrink([true; 2])
+                    .show(ui, |ui| {
+                        for item in self.message_log.iter().rev() {
+                            ui.label(item);
+                        }
+                    });
             }
         });
 

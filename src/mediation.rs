@@ -4,6 +4,7 @@ use std::{
     time::SystemTime,
 };
 
+use circular_buffer::CircularBuffer;
 use log::{debug, warn};
 use midi_msg::{Channel, ControlChange, MidiMsg};
 
@@ -41,8 +42,9 @@ pub struct PortInformation {
 
 pub type MidiReceiverPayload = (usize, MidiMsg);
 
+pub const MONITOR_LOG_LENGTH: usize = 8;
 pub struct MediationDataModel {
-    pub last_msg_received: String,
+    pub message_log: CircularBuffer<MONITOR_LOG_LENGTH, String>,
     pub midi_rx: Receiver<MidiReceiverPayload>,
     pub tether_tx: Sender<TetherMidiMessage>,
     pub port_info: HashMap<String, PortInformation>,
@@ -56,7 +58,7 @@ impl MediationDataModel {
         MediationDataModel {
             midi_rx,
             tether_tx,
-            last_msg_received: "".to_owned(),
+            message_log: CircularBuffer::new(),
             port_info: HashMap::new(),
         }
     }
@@ -78,7 +80,7 @@ impl MediationDataModel {
     pub fn handle_incoming_midi(&mut self, port_index: usize, msg: &MidiMsg) {
         let raw_message_string = format!("{:?}", msg);
         let raw_payload = to_vec_named(&raw_message_string).expect("failed to encode raw payload");
-        self.last_msg_received = raw_message_string.to_owned();
+        self.message_log.push_back(raw_message_string);
         self.tether_tx
             .send(TetherMidiMessage::Raw(raw_payload))
             .unwrap();
