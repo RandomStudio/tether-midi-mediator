@@ -5,6 +5,7 @@ use std::{
     time::Duration,
 };
 
+use anyhow::anyhow;
 use clap::{command, Parser};
 use eframe::egui;
 use env_logger::Env;
@@ -40,11 +41,16 @@ fn main() {
     });
     handles.push(midi_thread);
 
+    let mut model = Model::new(rx);
+
     if cli.headless_mode {
         info!("Running in headless mode; no graphic output");
-        for received in rx {
-            println!("Received MIDI message: {:?}", received);
-            // std::thread::sleep(Duration::from_millis(1));
+        loop {
+            while let Ok(msg) = &model.rx.try_recv() {
+                model.handle_incoming_midi(&msg);
+                std::thread::sleep(Duration::from_millis(1));
+                debug!("Last received message: {}", &model.last_msg_received);
+            }
         }
     } else {
         info!("Running graphics mode");
@@ -55,14 +61,16 @@ fn main() {
         eframe::run_native(
             "My egui App",
             options,
-            Box::new(|_cc| Box::<Model>::new(Model::new(rx))),
+            Box::new(|_cc| Box::<Model>::new(model)),
         )
         .expect("Failed to launch GUI");
+        debug!("GUI ended; exit now...");
+        std::process::exit(0);
     }
 
-    for handle in handles {
-        handle.join().expect("failed to join thread handle");
-    }
+    // for handle in handles {
+    //     handle.join().expect("failed to join thread handle");
+    // }
 }
 
 fn get_midi_input(preferred_port: usize, tx: mpsc::Sender<MidiMsg>) -> Result<(), Box<dyn Error>> {
@@ -180,10 +188,45 @@ impl Model {
             last_msg_received: "".to_owned(),
         }
     }
+
+    pub fn handle_incoming_midi(&mut self, msg: &MidiMsg) {
+        self.last_msg_received = format!("{:?}", msg);
+        match msg {
+            MidiMsg::ChannelVoice { channel, msg } => {
+                println!("Channel {:?}, msg: {:?}", channel, msg);
+                match msg {
+                    midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => {
+                        println!("NoteOn {}, @ {}", note, velocity);
+                    }
+                    midi_msg::ChannelVoiceMsg::NoteOff { note, velocity } => {
+                        println!("NoteOff {}, @ {}", note, velocity);
+                    }
+                    midi_msg::ChannelVoiceMsg::ControlChange { control } => {
+                        println!("ControlChange message: {:?}", control);
+                        match control {
+                            ControlChange::Undefined { control, value } => {
+                                println!("'Undefined' control change message: control = {control}, value = {value}");
+                            }
+                            _ => {
+                                warn!("This type of ControlChange message not handled (yet)");
+                            }
+                        }
+                    }
+                    _ => {
+                        warn!("This type of ChannelVoiceMessage not handled (yet)");
+                    }
+                }
+            }
+            _ => {
+                debug!("unhandled midi message: {:?}", msg);
+            }
+        }
+    }
 }
 
 impl eframe::App for Model {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // TODO: continuous mode essential?
         ctx.request_repaint();
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -194,7 +237,8 @@ impl eframe::App for Model {
 
         if let Ok(msg) = &self.rx.try_recv() {
             println!("GUI received MIDI message: {:?}", msg);
-            self.last_msg_received = format!("{:?}", msg);
+            self.handle_incoming_midi(&msg);
+            // TODO: is this the right place to add a delay?
             std::thread::sleep(Duration::from_millis(1));
         }
     }
