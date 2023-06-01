@@ -22,8 +22,9 @@ pub struct Cli {
     #[arg(long = "headless")]
     headless_mode: bool,
 
-    #[arg(long = "midi.port", default_value_t = 0)]
-    midi_port: usize,
+    /// Specify one or more MIDI ports by index, in any order
+    #[clap()]
+    midi_ports: Vec<usize>,
 }
 
 fn main() {
@@ -34,12 +35,14 @@ fn main() {
 
     let (tx, rx) = mpsc::channel();
 
-    let midi_tx = tx.clone();
-    let midi_thread = std::thread::spawn(move || match get_midi_input(cli.midi_port, midi_tx) {
-        Ok(_) => (),
-        Err(err) => println!("Error: {}", err),
-    });
-    handles.push(midi_thread);
+    for port in cli.midi_ports {
+        let midi_tx = tx.clone();
+        let midi_thread = std::thread::spawn(move || match get_midi_input(port, midi_tx) {
+            Ok(_) => (),
+            Err(err) => println!("Error: {}", err),
+        });
+        handles.push(midi_thread);
+    }
 
     let mut model = Model::new(rx);
 
@@ -67,10 +70,6 @@ fn main() {
         debug!("GUI ended; exit now...");
         std::process::exit(0);
     }
-
-    // for handle in handles {
-    //     handle.join().expect("failed to join thread handle");
-    // }
 }
 
 fn get_midi_input(preferred_port: usize, tx: mpsc::Sender<MidiMsg>) -> Result<(), Box<dyn Error>> {
