@@ -15,3 +15,4 @@ cargo run -- 1 2
 ## TODO
 - [ ] Make it possible to list ports and add them (and save them?) via GUI; no need for command line args
 - [ ] Convert, and possibly visualise, MIDI note numbers -> actual notes
+- [ ] Convert the other way, i.e. Tether Messages -> Midi Output
