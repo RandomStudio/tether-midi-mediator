@@ -1,4 +1,4 @@
-use std::{error::Error, sync::mpsc, time::Duration};
+use std::{sync::mpsc, time::Duration};
 
 use log::{debug, info, warn};
 use midi_msg::{MidiMsg, ReceiverContext};

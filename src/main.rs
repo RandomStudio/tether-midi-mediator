@@ -9,10 +9,11 @@ use env_logger::Env;
 use log::{debug, error, info, warn};
 use mediation::MediationDataModel;
 use midi_interface::listen_for_midi;
-use tether_agent::TetherAgent;
+use tether_interface::start_tether_agent;
 
 mod mediation;
 mod midi_interface;
+mod tether_interface;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -55,21 +56,7 @@ fn main() {
     if cli.tether_disable {
         warn!("Tether connection disabled; local-mode only");
     } else {
-        let agent = TetherAgent::new("midi", None, None);
-        match agent.connect(None, None) {
-            Ok(()) => {
-                let tether_thread = std::thread::spawn(move || loop {
-                    if let Ok(msg) = tether_rx.recv() {
-                        debug!("Tether Thread received message via Model: {:?}", msg);
-                    }
-                });
-                handles.push(tether_thread);
-            }
-            Err(e) => {
-                error!("Error connecting Tether Agent: {e}");
-                panic!("Could not connect Tether");
-            }
-        }
+        handles.push(start_tether_agent(tether_rx));
     }
 
     for port in cli.midi_ports {
