@@ -17,8 +17,19 @@ mod midi_interface;
 mod settings;
 mod tether_interface;
 
+fn list_midi_ports() -> anyhow::Result<()> {
+    let mut midi_input = MidiInput::new("midir reading input").expect("midir failure");
+    midi_input.ignore(Ignore::None);
+
+    for (i, p) in midi_input.ports().iter().enumerate() {
+        println!("{}: {}", i, midi_input.port_name(p)?);
+    }
+    Ok(())
+}
 fn main() {
     let cli = Cli::parse();
+
+    list_midi_ports().expect("failed to list MIDI ports");
 
     if cli.midi_ports.is_empty() {
         panic!("You must provide at least one MIDI port index(es), e.g. \"./tether-midi-mediator 1 2\"")
