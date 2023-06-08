@@ -36,20 +36,43 @@ pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
 
     ui.separator();
 
-    ui.heading(&format!(
-        "Last {} (max) messages received",
-        MONITOR_LOG_LENGTH
-    ));
+    ui.columns(2, |columns| {
+        // Left: MIDI IN
+        columns[0].heading(&format!(
+            "Last {} (max) MIDI messages received",
+            MONITOR_LOG_LENGTH
+        ));
 
-    if model.message_log.is_empty() {
-        ui.label("Nothing received yet");
-    } else {
-        egui::ScrollArea::vertical()
-            .auto_shrink([true; 2])
-            .show(ui, |ui| {
-                for item in model.message_log.iter().rev() {
-                    ui.label(item);
-                }
-            });
-    }
+        if model.midi_message_log.is_empty() {
+            columns[0].label("Nothing received yet");
+        } else {
+            egui::ScrollArea::vertical()
+                .auto_shrink([true; 2])
+                .id_source("left")
+                .show(&mut columns[0], |ui| {
+                    for item in model.midi_message_log.iter().rev() {
+                        ui.label(item);
+                    }
+                });
+        }
+
+        // Right: Tether OUT
+        columns[1].heading(&format!(
+            "Last {} (max) Tether messages translated",
+            MONITOR_LOG_LENGTH
+        ));
+
+        if model.tether_message_log.is_empty() {
+            columns[1].label("Nothing sent yet");
+        } else {
+            egui::ScrollArea::vertical()
+                .auto_shrink([true; 2])
+                .id_source("right")
+                .show(&mut columns[1], |ui| {
+                    for item in model.tether_message_log.iter().rev() {
+                        ui.label(item);
+                    }
+                });
+        }
+    });
 }

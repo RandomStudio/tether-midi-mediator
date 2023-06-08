@@ -50,7 +50,8 @@ pub type LastControllerValue = u8;
 
 pub const MONITOR_LOG_LENGTH: usize = 8;
 pub struct MediationDataModel {
-    pub message_log: CircularBuffer<MONITOR_LOG_LENGTH, String>,
+    pub midi_message_log: CircularBuffer<MONITOR_LOG_LENGTH, String>,
+    pub tether_message_log: CircularBuffer<MONITOR_LOG_LENGTH, String>,
     pub midi_rx: Receiver<MidiReceiverPayload>,
     pub tether_tx: Sender<TetherMidiMessage>,
     pub port_info: HashMap<String, PortInformation>,
@@ -71,7 +72,8 @@ impl MediationDataModel {
         MediationDataModel {
             midi_rx,
             tether_tx,
-            message_log: CircularBuffer::new(),
+            midi_message_log: CircularBuffer::new(),
+            tether_message_log: CircularBuffer::new(),
             port_info: HashMap::new(),
             tether_state_rx,
             tether_connected: false,
@@ -98,7 +100,7 @@ impl MediationDataModel {
     pub fn handle_incoming_midi(&mut self, port_index: usize, msg: &MidiMsg) {
         let raw_message_string = format!("{:?}", msg);
         let raw_payload = to_vec_named(&raw_message_string).expect("failed to encode raw payload");
-        self.message_log.push_back(raw_message_string);
+        self.midi_message_log.push_back(raw_message_string);
         self.tether_tx
             .send(TetherMidiMessage::Raw(raw_payload))
             .unwrap();
@@ -108,22 +110,26 @@ impl MediationDataModel {
                 debug!("Channel {:?}, msg: {:?}", channel, msg);
                 match msg {
                     midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => {
+                        let out_msg = TetherNotePayload {
+                            channel: channel_to_int(*channel),
+                            note: *note,
+                            velocity: *velocity,
+                        };
+                        self.tether_message_log.push_back(format!("{:?}", out_msg));
                         self.tether_tx
-                            .send(TetherMidiMessage::NoteOn(TetherNotePayload {
-                                channel: channel_to_int(*channel),
-                                note: *note,
-                                velocity: *velocity,
-                            }))
+                            .send(TetherMidiMessage::NoteOn(out_msg))
                             .unwrap();
                         debug!("NoteOn {}, @ {}", note, velocity);
                     }
                     midi_msg::ChannelVoiceMsg::NoteOff { note, velocity } => {
+                        let out_msg = TetherNotePayload {
+                            channel: channel_to_int(*channel),
+                            note: *note,
+                            velocity: *velocity,
+                        };
+                        self.tether_message_log.push_back(format!("{:?}", out_msg));
                         self.tether_tx
-                            .send(TetherMidiMessage::NoteOff(TetherNotePayload {
-                                channel: channel_to_int(*channel),
-                                note: *note,
-                                velocity: *velocity,
-                            }))
+                            .send(TetherMidiMessage::NoteOff(out_msg))
                             .unwrap();
                         debug!("NoteOff {}, @ {}", note, velocity);
                     }
@@ -154,14 +160,14 @@ impl MediationDataModel {
                                 } else {
                                     *value
                                 };
+                                let out_msg = TetherControlChangePayload {
+                                    channel: channel_to_int(*channel),
+                                    controller: *control,
+                                    value,
+                                };
+                                self.tether_message_log.push_back(format!("{:?}", out_msg));
                                 self.tether_tx
-                                    .send(TetherMidiMessage::ControlChange(
-                                        TetherControlChangePayload {
-                                            channel: channel_to_int(*channel),
-                                            controller: *control,
-                                            value,
-                                        },
-                                    ))
+                                    .send(TetherMidiMessage::ControlChange(out_msg))
                                     .unwrap();
                                 debug!("'Undefined' control change message: control = {control}, value = {value}");
                             }
