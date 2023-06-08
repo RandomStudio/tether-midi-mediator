@@ -151,7 +151,6 @@ impl MediationDataModel {
                                         self.known_controller_values.insert(key, *value);
                                         *value
                                     }
-                                    // self.known_controller_values.insert(format!("{}", control), ())
                                 } else {
                                     *value
                                 };
