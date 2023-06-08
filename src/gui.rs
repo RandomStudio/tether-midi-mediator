@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use egui::{Color32, RichText};
 
-use crate::mediation::{MediationDataModel, MONITOR_LOG_LENGTH};
+use crate::mediation::{ControllerValueMode, MediationDataModel, MONITOR_LOG_LENGTH};
 
 pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
     ui.heading("Tether Agent");
@@ -33,6 +33,22 @@ pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
             }
         });
     }
+
+    ui.separator();
+
+    ui.horizontal(|ui| {
+        ui.label("Controller value mode:");
+        ui.radio_value(
+            &mut model.controller_mode,
+            ControllerValueMode::Absolute,
+            "Absolute",
+        );
+        ui.radio_value(
+            &mut model.controller_mode,
+            ControllerValueMode::Relative,
+            "Relative",
+        );
+    });
 
     ui.separator();
 

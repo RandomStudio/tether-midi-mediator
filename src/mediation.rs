@@ -48,6 +48,12 @@ pub type MidiReceiverPayload = (usize, MidiMsg);
 /// Value
 pub type LastControllerValue = u8;
 
+#[derive(PartialEq, Debug)]
+pub enum ControllerValueMode {
+    Absolute,
+    Relative,
+}
+
 pub const MONITOR_LOG_LENGTH: usize = 16;
 pub struct MediationDataModel {
     pub midi_message_log: CircularBuffer<MONITOR_LOG_LENGTH, String>,
@@ -58,7 +64,7 @@ pub struct MediationDataModel {
     pub tether_connected: bool,
     pub tether_uri: Option<String>,
     pub tether_state_rx: Receiver<TetherStateMessage>,
-    pub controller_relative_mode: bool,
+    pub controller_mode: ControllerValueMode,
     pub known_controller_values: HashMap<String, LastControllerValue>,
 }
 
@@ -67,7 +73,7 @@ impl MediationDataModel {
         midi_rx: Receiver<MidiReceiverPayload>,
         tether_tx: Sender<TetherMidiMessage>,
         tether_state_rx: Receiver<TetherStateMessage>,
-        controller_relative_mode: bool,
+        controller_mode: ControllerValueMode,
     ) -> Self {
         MediationDataModel {
             midi_rx,
@@ -78,7 +84,7 @@ impl MediationDataModel {
             tether_state_rx,
             tether_connected: false,
             tether_uri: None,
-            controller_relative_mode,
+            controller_mode,
             known_controller_values: HashMap::new(),
         }
     }
@@ -137,28 +143,31 @@ impl MediationDataModel {
                         debug!("ControlChange message: {:?}", control);
                         match control {
                             ControlChange::Undefined { control, value } => {
-                                let value = if self.controller_relative_mode {
-                                    let key = format!("control");
-                                    if let Some(prev_value) = self.known_controller_values.get(&key)
-                                    {
-                                        let increment: i16 = if *value < 64 {
-                                            *value as i16
+                                let value = match self.controller_mode {
+                                    ControllerValueMode::Relative => {
+                                        let key = format!("control");
+                                        if let Some(prev_value) =
+                                            self.known_controller_values.get(&key)
+                                        {
+                                            let increment: i16 = if *value < 64 {
+                                                *value as i16
+                                            } else {
+                                                (*value as i16) - 128
+                                            };
+                                            let absolute_value: u8 = ((*prev_value as i16)
+                                                + increment)
+                                                .clamp(0, 127)
+                                                .try_into()
+                                                .expect("integer conversion failed");
+                                            self.known_controller_values
+                                                .insert(key, absolute_value as u8);
+                                            absolute_value
                                         } else {
-                                            (*value as i16) - 128
-                                        };
-                                        let absolute_value: u8 = ((*prev_value as i16) + increment)
-                                            .clamp(0, 127)
-                                            .try_into()
-                                            .expect("integer conversion failed");
-                                        self.known_controller_values
-                                            .insert(key, absolute_value as u8);
-                                        absolute_value
-                                    } else {
-                                        self.known_controller_values.insert(key, *value);
-                                        *value
+                                            self.known_controller_values.insert(key, *value);
+                                            *value
+                                        }
                                     }
-                                } else {
-                                    *value
+                                    ControllerValueMode::Absolute => *value,
                                 };
                                 let out_msg = TetherControlChangePayload {
                                     channel: channel_to_int(*channel),

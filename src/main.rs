@@ -5,7 +5,7 @@ use eframe::egui;
 use env_logger::Env;
 use gui::render_gui;
 use log::{debug, info, warn};
-use mediation::MediationDataModel;
+use mediation::{ControllerValueMode, MediationDataModel};
 use midi_interface::{get_midi_connection, midi_listener_thread};
 use midir::{Ignore, MidiInput};
 use settings::Cli;
@@ -83,7 +83,11 @@ fn main() {
         midi_rx,
         tether_tx,
         tether_state_rx,
-        cli.relative_mode_enabled,
+        if cli.relative_mode_enabled {
+            ControllerValueMode::Relative
+        } else {
+            ControllerValueMode::Absolute
+        },
     );
 
     for port in listen_ports {
