@@ -145,7 +145,7 @@ impl MediationDataModel {
                             ControlChange::Undefined { control, value } => {
                                 let value = match self.controller_mode {
                                     ControllerValueMode::Relative => {
-                                        let key = format!("control");
+                                        let key = format!("{}", control);
                                         if let Some(prev_value) =
                                             self.known_controller_values.get(&key)
                                         {
