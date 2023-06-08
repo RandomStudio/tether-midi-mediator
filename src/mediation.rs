@@ -45,16 +45,16 @@ pub struct PortInformation {
 /// Port index, MIDI Message
 pub type MidiReceiverPayload = (usize, MidiMsg);
 
-/// Value, time
+/// Value
 pub type LastControllerValue = u8;
 
-pub const MONITOR_LOG_LENGTH: usize = 8;
+pub const MONITOR_LOG_LENGTH: usize = 16;
 pub struct MediationDataModel {
     pub midi_message_log: CircularBuffer<MONITOR_LOG_LENGTH, String>,
     pub tether_message_log: CircularBuffer<MONITOR_LOG_LENGTH, String>,
     pub midi_rx: Receiver<MidiReceiverPayload>,
     pub tether_tx: Sender<TetherMidiMessage>,
-    pub port_info: HashMap<String, PortInformation>,
+    pub ports_metadata: HashMap<String, PortInformation>,
     pub tether_connected: bool,
     pub tether_uri: Option<String>,
     pub tether_state_rx: Receiver<TetherStateMessage>,
@@ -74,7 +74,7 @@ impl MediationDataModel {
             tether_tx,
             midi_message_log: CircularBuffer::new(),
             tether_message_log: CircularBuffer::new(),
-            port_info: HashMap::new(),
+            ports_metadata: HashMap::new(),
             tether_state_rx,
             tether_connected: false,
             tether_uri: None,
@@ -87,7 +87,7 @@ impl MediationDataModel {
         // let shortened_name = full_name.replace(" ", "_").trim().to_lowercase();
         let port_key = format!("{index}");
         // let full_name = String::from("unknown");
-        self.port_info.insert(
+        self.ports_metadata.insert(
             port_key,
             PortInformation {
                 index,
@@ -189,7 +189,7 @@ impl MediationDataModel {
     }
 
     fn update_port_info(&mut self, index: usize) {
-        for (key, info) in self.port_info.iter_mut() {
+        for (key, info) in self.ports_metadata.iter_mut() {
             if key.eq(&format!("{index}")) {
                 info.last_received = SystemTime::now();
             }

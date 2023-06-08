@@ -18,14 +18,14 @@ pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
 
     ui.heading("MIDI Ports Connected");
 
-    for (_key, info) in model.port_info.iter() {
+    for (_key, info) in model.ports_metadata.iter() {
         ui.horizontal(|ui| {
             ui.label(&format!("PORT #{}: \"{}\"", info.index, info.full_name));
             if let Ok(elapsed) = info.last_received.elapsed() {
-                let color = if elapsed > Duration::from_secs(5) {
-                    Color32::RED
+                let color = if elapsed > Duration::from_secs(15) {
+                    Color32::DARK_GRAY
                 } else if elapsed > Duration::from_secs(1) {
-                    Color32::LIGHT_YELLOW
+                    Color32::GRAY
                 } else {
                     Color32::GREEN
                 };

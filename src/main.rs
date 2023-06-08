@@ -17,23 +17,25 @@ mod midi_interface;
 mod settings;
 mod tether_interface;
 
-fn list_midi_ports() -> anyhow::Result<()> {
+fn list_midi_ports() -> anyhow::Result<Vec<usize>> {
     let mut midi_input = MidiInput::new("midir reading input").expect("midir failure");
     midi_input.ignore(Ignore::None);
 
+    let mut port_indexes = Vec::new();
     for (i, p) in midi_input.ports().iter().enumerate() {
-        println!("{}: {}", i, midi_input.port_name(p)?);
+        info!(
+            "Available MIDI port: #{} = {}",
+            i,
+            midi_input
+                .port_name(p)
+                .expect("failed to retrieve port name")
+        );
+        port_indexes.push(i);
     }
-    Ok(())
+    Ok(port_indexes)
 }
 fn main() {
     let cli = Cli::parse();
-
-    list_midi_ports().expect("failed to list MIDI ports");
-
-    if cli.midi_ports.is_empty() {
-        panic!("You must provide at least one MIDI port index(es), e.g. \"./tether-midi-mediator 1 2\"")
-    }
 
     env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level))
         .filter_module("paho_mqtt", log::LevelFilter::Warn)
@@ -41,6 +43,15 @@ fn main() {
         .filter_module("egui_winit", log::LevelFilter::Warn)
         .filter_module("eframe", log::LevelFilter::Warn)
         .init();
+    let available_port_indexes = list_midi_ports().expect("failed to list MIDI ports");
+
+    let listen_ports = if cli.midi_ports.is_empty() {
+        warn!("No ports specified; will listen on all available MIDI Inputs");
+        available_port_indexes
+    } else {
+        info!("MIDI ports specified: {:?}", cli.midi_ports);
+        cli.midi_ports
+    };
 
     // TODO: we don't really use these handles or join them
     // Might be useful for closing things down properly, though
@@ -75,7 +86,7 @@ fn main() {
         cli.relative_mode_enabled,
     );
 
-    for port in cli.midi_ports {
+    for port in listen_ports {
         let mut midi_input = MidiInput::new("midir reading input").expect("midir failure");
         midi_input.ignore(Ignore::None);
 
