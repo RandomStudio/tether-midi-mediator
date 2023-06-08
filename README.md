@@ -15,6 +15,6 @@ cargo run -- 1 2
 ## TODO
 - [x] Handle "relative mode" knob controller values, e.g. Akai APC Key25
 - [x] Display incoming MIDI messages AND outgoing Tether messages
-- [ ] Make it possible to list ports and add them (and save them?) via GUI; no need for command line args
+- [x] Make it possible to list ports, optionally specify inputs
 - [ ] Convert, and possibly visualise, MIDI note numbers -> actual notes
 - [ ] Convert the other way, i.e. Tether Messages -> Midi Output
