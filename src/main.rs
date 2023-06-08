@@ -68,7 +68,12 @@ fn main() {
         ));
     }
 
-    let mut model = MediationDataModel::new(midi_rx, tether_tx, tether_state_rx);
+    let mut model = MediationDataModel::new(
+        midi_rx,
+        tether_tx,
+        tether_state_rx,
+        cli.relative_mode_enabled,
+    );
 
     for port in cli.midi_ports {
         let mut midi_input = MidiInput::new("midir reading input").expect("midir failure");

@@ -42,7 +42,11 @@ pub struct PortInformation {
     pub last_received: SystemTime,
 }
 
+/// Port index, MIDI Message
 pub type MidiReceiverPayload = (usize, MidiMsg);
+
+/// Value, time
+pub type LastControllerValue = (u8, std::time::SystemTime);
 
 pub const MONITOR_LOG_LENGTH: usize = 8;
 pub struct MediationDataModel {
@@ -53,6 +57,8 @@ pub struct MediationDataModel {
     pub tether_connected: bool,
     pub tether_uri: Option<String>,
     pub tether_state_rx: Receiver<TetherStateMessage>,
+    pub controller_relative_mode: bool,
+    pub known_controller_values: HashMap<String, LastControllerValue>,
 }
 
 impl MediationDataModel {
@@ -60,6 +66,7 @@ impl MediationDataModel {
         midi_rx: Receiver<MidiReceiverPayload>,
         tether_tx: Sender<TetherMidiMessage>,
         tether_state_rx: Receiver<TetherStateMessage>,
+        controller_relative_mode: bool,
     ) -> Self {
         MediationDataModel {
             midi_rx,
@@ -69,6 +76,8 @@ impl MediationDataModel {
             tether_state_rx,
             tether_connected: false,
             tether_uri: None,
+            controller_relative_mode,
+            known_controller_values: HashMap::new(),
         }
     }
 
@@ -122,12 +131,38 @@ impl MediationDataModel {
                         debug!("ControlChange message: {:?}", control);
                         match control {
                             ControlChange::Undefined { control, value } => {
+                                let value = if self.controller_relative_mode {
+                                    let key = format!("control");
+                                    if let Some((prev_value, _prev_time)) =
+                                        self.known_controller_values.get(&key)
+                                    {
+                                        let increment: i16 = if *value < 64 {
+                                            *value as i16
+                                        } else {
+                                            (*value as i16) - 128
+                                        };
+                                        let absolute_value: u8 = ((*prev_value as i16) + increment)
+                                            .clamp(0, 127)
+                                            .try_into()
+                                            .expect("integer conversion failed");
+                                        self.known_controller_values
+                                            .insert(key, (absolute_value as u8, SystemTime::now()));
+                                        absolute_value
+                                    } else {
+                                        self.known_controller_values
+                                            .insert(key, (*value, SystemTime::now()));
+                                        *value
+                                    }
+                                    // self.known_controller_values.insert(format!("{}", control), ())
+                                } else {
+                                    *value
+                                };
                                 self.tether_tx
                                     .send(TetherMidiMessage::ControlChange(
                                         TetherControlChangePayload {
                                             channel: channel_to_int(*channel),
                                             controller: *control,
-                                            value: *value,
+                                            value,
                                         },
                                     ))
                                     .unwrap();

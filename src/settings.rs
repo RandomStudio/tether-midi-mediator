@@ -39,6 +39,10 @@ pub struct Cli {
     #[arg(long = "tether.id")]
     pub tether_id: Option<String>,
 
+    /// Enable translation of relative controller values into absolute values
+    #[arg(long = "midi.relative")]
+    pub relative_mode_enabled: bool,
+
     /// Specify one or more MIDI ports by index, in any order
     #[clap()]
     pub midi_ports: Vec<usize>,

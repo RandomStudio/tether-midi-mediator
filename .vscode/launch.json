@@ -1,0 +1,45 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'tether-midi-mediator'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=tether-midi-mediator",
+          "--package=tether-midi-mediator",
+        ],
+        "filter": {
+          "name": "tether-midi-mediator",
+          "kind": "bin"
+        }
+      },
+      "args": ["--midi.relative", "2"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'tether-midi-mediator'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=tether-midi-mediator",
+          "--package=tether-midi-mediator"
+        ],
+        "filter": {
+          "name": "tether-midi-mediator",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
