@@ -46,7 +46,7 @@ pub struct PortInformation {
 pub type MidiReceiverPayload = (usize, MidiMsg);
 
 /// Value, time
-pub type LastControllerValue = (u8, std::time::SystemTime);
+pub type LastControllerValue = u8;
 
 pub const MONITOR_LOG_LENGTH: usize = 8;
 pub struct MediationDataModel {
@@ -133,8 +133,7 @@ impl MediationDataModel {
                             ControlChange::Undefined { control, value } => {
                                 let value = if self.controller_relative_mode {
                                     let key = format!("control");
-                                    if let Some((prev_value, _prev_time)) =
-                                        self.known_controller_values.get(&key)
+                                    if let Some(prev_value) = self.known_controller_values.get(&key)
                                     {
                                         let increment: i16 = if *value < 64 {
                                             *value as i16
@@ -146,11 +145,10 @@ impl MediationDataModel {
                                             .try_into()
                                             .expect("integer conversion failed");
                                         self.known_controller_values
-                                            .insert(key, (absolute_value as u8, SystemTime::now()));
+                                            .insert(key, absolute_value as u8);
                                         absolute_value
                                     } else {
-                                        self.known_controller_values
-                                            .insert(key, (*value, SystemTime::now()));
+                                        self.known_controller_values.insert(key, *value);
                                         *value
                                     }
                                     // self.known_controller_values.insert(format!("{}", control), ())
