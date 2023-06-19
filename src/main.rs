@@ -39,9 +39,6 @@ fn main() {
 
     env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level))
         .filter_module("paho_mqtt", log::LevelFilter::Warn)
-        .filter_module("egui_glow", log::LevelFilter::Warn)
-        .filter_module("egui_winit", log::LevelFilter::Warn)
-        .filter_module("eframe", log::LevelFilter::Warn)
         .init();
     let available_port_indexes = list_midi_ports().expect("failed to list MIDI ports");
 
