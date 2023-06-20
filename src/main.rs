@@ -147,11 +147,10 @@ impl eframe::App for MediationDataModel {
             self.tether_uri = broker_uri.clone();
         }
 
-        if let Ok((port_index, msg)) = &self.midi_rx.try_recv() {
+        while let Ok((port_index, msg)) = &self.midi_rx.try_recv() {
             debug!("GUI received MIDI message: {:?}", msg);
             self.handle_incoming_midi(*port_index, msg);
-            // TODO: is this the right place to add a delay?
-            std::thread::sleep(Duration::from_millis(1));
+            // std::thread::sleep(Duration::from_millis(1));
         }
     }
 }

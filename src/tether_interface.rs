@@ -1,6 +1,7 @@
 use std::{
     sync::mpsc::{Receiver, Sender},
     thread::JoinHandle,
+    time::Duration,
 };
 
 use log::{debug, error};
@@ -42,16 +43,16 @@ pub fn start_tether_agent(
             .expect("failed to send state");
 
             let note_on_output = agent
-                .create_output_plug("notesOn", None, None)
+                .create_output_plug("notesOn", Some(1), None)
                 .expect("failed to create output plug");
             let note_off_output = agent
-                .create_output_plug("notesOff", None, None)
+                .create_output_plug("notesOff", Some(1), None)
                 .expect("failed to create output plug");
             let cc_output = agent
-                .create_output_plug("controlChange", None, None)
+                .create_output_plug("controlChange", Some(0), None)
                 .expect("failed to create output plug");
             let raw_output = agent
-                .create_output_plug("raw", None, None)
+                .create_output_plug("raw", Some(0), None)
                 .expect("failed to create output plug");
             std::thread::spawn(move || loop {
                 if let Ok(msg) = rx.recv() {
@@ -74,6 +75,8 @@ pub fn start_tether_agent(
                                 .unwrap();
                         }
                     }
+                } else {
+                    std::thread::sleep(Duration::from_millis(1));
                 }
             })
         }
