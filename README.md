@@ -7,6 +7,29 @@ Download a [release](https://github.com/RandomStudio/tether-midi-mediator/releas
 
 Available MIDI input ports will be detected automatically.
 
+## Tether MIDI Messages
+This Agent translates MIDI into standardised Tether Messages on standard plugs.
+
+- **ControlChange** (knob/slider) input
+  - Published on the plug `"controlChange"`
+  - Keys are 
+    - `channel`: MIDI channel
+    - `control`: knob/slider number/ID
+    - `value`: absolute value 0-127
+- **Note On** input
+  - Published on the plug `"notesOn"`
+  - Keys are 
+    - `channel`: MIDI channel
+    - `note`: MIDI note number
+    - `velocity`: volume/pressure 0-127
+- **Note Of** input
+  - Published on the plug `"notesOff"`
+  - Keys are 
+    - `channel`: MIDI channel
+    - `note`: MIDI note number
+    - `velocity`: volume/pressure 0-127 (typically 0)
+
+In addition, the "untranslated" MIDI message, as parsed by the underyling [midi-msg](https://crates.io/crates/midi-msg) library, is published on a plug `"raw"`.
 ## Absolute vs Relative mode
 When it comes to Control Change messages, some MIDI controllers send absolute values from 0-127 depending on the knob position. This is the "standard" way.
 
@@ -14,6 +37,7 @@ Other controllers, particularly those with "endless" knobs (no stop points), sen
 - Values in the lower half of the range (0-63) are interpreted as increment speeds
 - Values in the upper half of the range (64-127) are interpreted as decrement speeds
 - Any "previously known" value for the same channel+controller is recalled and the increment/decrement is applied; the range is also clamped if necessary
+- The `"controlChange"` plug will publish only the absolute values; the `"raw"` plug will contain the original values sent by the controller
 
 Relative-mode is not standardised for MIDI devices. The above mechanism has been tested with an Akai APC Key25 Mk2. Submit an Issue if you think alternative algorithms should be possible.
 ## CLI options
