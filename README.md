@@ -7,6 +7,15 @@ Download a [release](https://github.com/RandomStudio/tether-midi-mediator/releas
 
 Available MIDI input ports will be detected automatically.
 
+## Absolute vs Relative mode
+When it comes to Control Change messages, some MIDI controllers send absolute values from 0-127 depending on the knob position. This is the "standard" way.
+
+Other controllers, particularly those with "endless" knobs (no stop points), send values meant to be interpreted as relative increase/decrease values. Tether Midi Mediator automatically handles this situation when in Relative mode (either select this in the GUI or pass `--midi.relative` flag from command line). The behaviour in relative mode is:
+- Values in the lower half of the range (0-63) are interpreted as increment speeds
+- Values in the upper half of the range (64-127) are interpreted as decrement speeds
+- Any "previously known" value for the same channel+controller is recalled and the increment/decrement is applied; the range is also clamped if necessary
+
+Relative-mode is not standardised for MIDI devices. The above mechanism has been tested with an Akai APC Key25 Mk2. Submit an Issue if you think alternative algorithms should be possible.
 ## CLI options
 You can change various settings using the command line. Append `--help` for more details.
 
