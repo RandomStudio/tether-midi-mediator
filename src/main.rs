@@ -6,10 +6,10 @@ use env_logger::Env;
 use gui::render_gui;
 use log::{debug, info, warn};
 use mediation::{ControllerValueMode, MediationDataModel};
-use midi_interface::{get_midi_connection, midi_listener_thread};
+use midi_interface::{get_midi_input, midi_listener_thread};
 use midir::{Ignore, MidiInput};
 use settings::Cli;
-use tether_interface::{start_tether_agent, TetherSettings};
+use tether_interface::TetherInterface;
 
 mod gui;
 mod mediation;
@@ -47,33 +47,21 @@ fn main() {
         available_port_indexes
     } else {
         info!("MIDI ports specified: {:?}", cli.midi_ports);
-        cli.midi_ports
+        let mut ports = Vec::new();
+        for p in &cli.midi_ports {
+            ports.push(*p);
+        }
+        ports
     };
-
-    // TODO: we don't really use these handles or join them
-    // Might be useful for closing things down properly, though
-    let mut handles = Vec::new();
 
     let (midi_tx, midi_rx) = mpsc::channel();
     let (tether_tx, tether_rx) = mpsc::channel();
     let (tether_state_tx, tether_state_rx) = mpsc::channel();
 
-    let tether_settings = TetherSettings {
-        host: cli.tether_host,
-        username: cli.tether_username,
-        password: cli.tether_password,
-        role: cli.tether_role,
-        id: cli.tether_id,
-    };
-
     if cli.tether_disable {
         warn!("Tether connection disabled; local-mode only");
     } else {
-        handles.push(start_tether_agent(
-            tether_rx,
-            tether_state_tx,
-            tether_settings,
-        ));
+        let _tether_interface = TetherInterface::new(&cli, tether_rx, tether_state_tx);
     }
 
     let mut model = MediationDataModel::new(
@@ -93,19 +81,10 @@ fn main() {
 
         let midi_tx = midi_tx.clone();
         let (midi_input_port, port_name) =
-            get_midi_connection(&midi_input, port).expect("failed to open MIDI port");
+            get_midi_input(&midi_input, port).expect("failed to open MIDI port");
         model.add_port(port, port_name);
-        handles.push(midi_listener_thread(
-            midi_input,
-            midi_input_port,
-            midi_tx,
-            port,
-        ));
+        let _handle = midi_listener_thread(midi_input, midi_input_port, midi_tx, port);
     }
-
-    // for handle in handles {
-    //     handle.join().unwrap();
-    // }
 
     if cli.headless_mode {
         info!("Running in headless mode; Ctrl+C to quit");
@@ -142,7 +121,7 @@ impl eframe::App for MediationDataModel {
             render_gui(self, ui);
         });
 
-        if let Ok((is_connected, _settings_used, broker_uri)) = &self.tether_state_rx.try_recv() {
+        if let Ok((is_connected, broker_uri)) = &self.tether_state_rx.try_recv() {
             self.tether_connected = *is_connected;
             self.tether_uri = broker_uri.clone();
         }

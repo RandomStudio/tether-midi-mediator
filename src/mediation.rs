@@ -8,8 +8,8 @@ use circular_buffer::CircularBuffer;
 use log::{debug, warn};
 use midi_msg::{Channel, ControlChange, MidiMsg};
 
-use serde::Serialize;
-use tether_agent::rmp_serde::to_vec_named;
+use rmp_serde::to_vec_named;
+use serde::{Deserialize, Serialize};
 
 use crate::tether_interface::TetherStateMessage;
 
@@ -20,7 +20,7 @@ pub struct TetherNotePayload {
     pub velocity: u8,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TetherControlChangePayload {
     pub channel: u8,
     pub controller: u8,

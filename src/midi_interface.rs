@@ -3,7 +3,7 @@ use std::{error::Error, sync::mpsc, time::Duration};
 use midi_msg::{MidiMsg, ReceiverContext, SystemRealTimeMsg};
 use midir::{MidiInput, MidiInputPort};
 
-pub fn get_midi_connection(
+pub fn get_midi_input(
     midi_in: &MidiInput,
     preferred_port: usize,
 ) -> Result<(MidiInputPort, String), Box<dyn Error>> {

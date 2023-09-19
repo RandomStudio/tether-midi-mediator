@@ -2384,10 +2384,9 @@ dependencies = [
 
 [[package]]
 name = "tether-agent"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd01d8a07b18d6a3d1c4bf4f9a13c51157a10e66afa786508003333028e7ec7f"
+version = "0.8.4"
 dependencies = [
+ "anyhow",
  "env_logger 0.7.1",
  "log",
  "paho-mqtt",
@@ -2409,6 +2408,7 @@ dependencies = [
  "log",
  "midi-msg",
  "midir",
+ "rmp-serde",
  "serde",
  "serde_json",
  "tether-agent",
