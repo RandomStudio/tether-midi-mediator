@@ -25,10 +25,10 @@ impl TetherInterface {
         tx: Sender<TetherStateMessage>,
     ) -> Self {
         let agent = TetherAgentOptionsBuilder::new(&settings.tether_role)
-            .id_optional(settings.tether_id.clone())
-            .host_optional(settings.tether_host.clone())
-            .username_optional(settings.tether_username.clone())
-            .password_optional(settings.tether_password.clone())
+            .id(settings.tether_id.as_deref())
+            .host(settings.tether_host.as_deref())
+            .username(settings.tether_username.as_deref())
+            .password(settings.tether_password.as_deref())
             .build()
             .expect("failed to connect Tether");
 
@@ -36,19 +36,19 @@ impl TetherInterface {
             .expect("failed to send state");
 
         let note_on_output = PlugOptionsBuilder::create_output("notesOn")
-            .qos(2)
+            .qos(Some(2))
             .build(&agent)
             .expect("failed to create output plug");
         let note_off_output = PlugOptionsBuilder::create_output("notesOff")
-            .qos(2)
+            .qos(Some(2))
             .build(&agent)
             .expect("failed to create output plug");
         let cc_output = PlugOptionsBuilder::create_output("controlChange")
-            .qos(1)
+            .qos(Some(1))
             .build(&agent)
             .expect("failed to create output plug");
         let raw_output = PlugOptionsBuilder::create_output("raw")
-            .qos(0)
+            .qos(Some(0))
             .build(&agent)
             .expect("failed to create output plug");
 
@@ -76,31 +76,31 @@ impl TetherInterface {
         std::thread::spawn(move || loop {
             let mut work_done = false;
 
-            while let Some((plug_name, message)) = agent.check_messages() {
+            if let Some((plug_name, message)) = agent.check_messages() {
                 work_done = true;
                 debug!("************************* Tether Thread received message via Tether");
 
-                if let Some(matched_plug) = input_plugs.get(&plug_name) {
-                    match matched_plug.name() {
-                        "notesOn" => todo!(),
-                        "notesOff" => todo!(),
-                        "controlChange" => {
-                            let control_change_message =
-                                rmp_serde::from_slice::<TetherControlChangePayload>(
-                                    message.payload(),
-                                );
-                            if let Ok(parsed) = control_change_message {
-                                debug!("Incoming Control Change Message: {:?}", parsed);
-                            }
-                        }
-                        &_ => {
-                            error!("failed to match plug name")
-                        }
-                    }
-                }
+                // if let Some(matched_plug) = input_plugs.get(&plug_name) {
+                //     match matched_plug.name() {
+                //         "notesOn" => todo!(),
+                //         "notesOff" => todo!(),
+                //         "controlChange" => {
+                //             let control_change_message =
+                //                 rmp_serde::from_slice::<TetherControlChangePayload>(
+                //                     message.payload(),
+                //                 );
+                //             if let Ok(parsed) = control_change_message {
+                //                 debug!("Incoming Control Change Message: {:?}", parsed);
+                //             }
+                //         }
+                //         &_ => {
+                //             error!("failed to match plug name")
+                //         }
+                //     }
+                // }
             }
 
-            while let Ok(msg) = rx.recv() {
+            if let Ok(msg) = rx.recv() {
                 work_done = true;
                 debug!("Tether Thread received message via Model: {:?}", &msg);
                 match msg {

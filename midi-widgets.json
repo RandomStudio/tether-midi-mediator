@@ -1,0 +1,27 @@
+{
+  "widgets": [
+    {
+      "generic": {
+        "common": {
+          "name": "controlChange",
+          "description": "Any generic data, in JSON format",
+          "plug": {
+            "OutputPlugDefinition": {
+              "common": {
+                "name": "controlChange",
+                "topic": "gui/any/controlChange",
+                "qos": 0
+              },
+              "retain": false
+            }
+          },
+          "midiMapping": null,
+          "qos": "AtMostOnce",
+          "retain": false
+        },
+        "value": "{\"channel\":1,\"controller\":1,\"value\":12}"
+      }
+    }
+  ],
+  "tetherSettings": null
+}
