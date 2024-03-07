@@ -7,7 +7,7 @@ use std::{
 use log::{debug, error};
 use tether_agent::TetherAgent;
 
-use crate::mediation::TetherMidiMessage;
+use crate::mediation::messages::TetherMidiMessage;
 
 #[derive(Clone)]
 pub struct TetherSettings {
@@ -51,6 +51,9 @@ pub fn start_tether_agent(
             let cc_output = agent
                 .create_output_plug("controlChange", Some(0), None)
                 .expect("failed to create output plug");
+            let knob_output = agent
+                .create_output_plug("knobs", Some(0), None)
+                .expect("failed to create output plug");
             let raw_output = agent
                 .create_output_plug("raw", Some(0), None)
                 .expect("failed to create output plug");
@@ -73,6 +76,9 @@ pub fn start_tether_agent(
                             agent
                                 .encode_and_publish(&note_off_output, n_payload)
                                 .unwrap();
+                        }
+                        TetherMidiMessage::Knob(k_payload) => {
+                            agent.encode_and_publish(&knob_output, &k_payload).unwrap();
                         }
                     }
                 } else {

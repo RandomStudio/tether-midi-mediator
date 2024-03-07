@@ -8,45 +8,20 @@ use circular_buffer::CircularBuffer;
 use log::{debug, error, warn};
 use midi_msg::{Channel, ControlChange, MidiMsg};
 
-use serde::Serialize;
 use tether_agent::rmp_serde::to_vec_named;
 
-use crate::tether_interface::TetherStateMessage;
+use crate::{
+    mediation::messages::{ControllerLabel, NotePayload, TetherMidiMessage},
+    tether_interface::TetherStateMessage,
+};
 
-#[derive(Serialize, Debug)]
-pub struct TetherNotePayload {
-    pub channel: u8,
-    pub note: u8,
-    pub velocity: u8,
-}
+pub mod mappings;
+pub mod messages;
 
-#[derive(Serialize, Debug)]
-pub enum ControllerLabel {
-    Numbered(u8),
-    Special(String),
-}
-
-#[derive(Serialize, Debug)]
-pub enum MidiValue {
-    LowRes(u8),
-    HiRes(u16),
-}
-
-#[derive(Serialize, Debug)]
-pub struct TetherControlChangePayload {
-    pub channel: u8,
-    pub controller: ControllerLabel,
-    pub value: MidiValue,
-}
-
-#[derive(Debug)]
-pub enum TetherMidiMessage {
-    /// Already-encoded payload
-    Raw(Vec<u8>),
-    NoteOn(TetherNotePayload),
-    NoteOff(TetherNotePayload),
-    ControlChange(TetherControlChangePayload),
-}
+use self::{
+    mappings::{load_knob_mappings, KnobMapping},
+    messages::{ControlChangePayload, KnobPayload, MidiValue},
+};
 
 pub struct PortInformation {
     pub index: usize,
@@ -64,7 +39,7 @@ pub enum ControllerValueMode {
 }
 
 pub const MONITOR_LOG_LENGTH: usize = 16;
-// pub const MAX_HIRES: u16 = 2u16.pow(13) - 128;
+pub const MAX_HIRES: u16 = 2u16.pow(14) - 128;
 // pub const HALF_HIRES: u16 = MAX_HIRES / 2;
 
 pub struct MediationDataModel {
@@ -78,6 +53,7 @@ pub struct MediationDataModel {
     pub tether_state_rx: Receiver<TetherStateMessage>,
     pub controller_mode: ControllerValueMode,
     pub known_controller_values: HashMap<String, MidiValue>,
+    pub knobs: Vec<KnobMapping>,
 }
 
 impl MediationDataModel {
@@ -98,6 +74,7 @@ impl MediationDataModel {
             tether_uri: None,
             controller_mode,
             known_controller_values: HashMap::new(),
+            knobs: Vec::new(),
         }
     }
 
@@ -128,7 +105,7 @@ impl MediationDataModel {
                 debug!("Channel {:?}, msg: {:?}", channel, msg);
                 match msg {
                     midi_msg::ChannelVoiceMsg::NoteOn { note, velocity } => {
-                        let out_msg = TetherNotePayload {
+                        let out_msg = NotePayload {
                             channel: channel_to_int(*channel),
                             note: *note,
                             velocity: *velocity,
@@ -140,7 +117,7 @@ impl MediationDataModel {
                         debug!("NoteOn {}, @ {}", note, velocity);
                     }
                     midi_msg::ChannelVoiceMsg::NoteOff { note, velocity } => {
-                        let out_msg = TetherNotePayload {
+                        let out_msg = NotePayload {
                             channel: channel_to_int(*channel),
                             note: *note,
                             velocity: *velocity,
@@ -163,12 +140,12 @@ impl MediationDataModel {
                             }
                             ControlChange::ModWheel(value) => self.send_control_change(
                                 ControllerLabel::Special("ModWheel".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::Breath(value) => self.send_control_change(
                                 ControllerLabel::Special("Breath".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::UndefinedHighRes {
@@ -180,72 +157,72 @@ impl MediationDataModel {
                                     "UndefinedHighRes-{}-{}",
                                     control1, control2
                                 )),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::Foot(value) => self.send_control_change(
                                 ControllerLabel::Special("Foot".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::Portamento(value) => self.send_control_change(
                                 ControllerLabel::Special("Portamento".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::DataEntry(value) => self.send_control_change(
                                 ControllerLabel::Special("DataEntry".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::Volume(value) => self.send_control_change(
                                 ControllerLabel::Special("Volume".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::Balance(value) => self.send_control_change(
                                 ControllerLabel::Special("Balance".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::Pan(value) => self.send_control_change(
                                 ControllerLabel::Special("Pan".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::Expression(value) => self.send_control_change(
                                 ControllerLabel::Special("Expression".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::Effect1(value) => self.send_control_change(
                                 ControllerLabel::Special("Effect1".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::Effect2(value) => self.send_control_change(
                                 ControllerLabel::Special("Effect2".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::GeneralPurpose1(value) => self.send_control_change(
                                 ControllerLabel::Special("GeneralPurpose1".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::GeneralPurpose2(value) => self.send_control_change(
                                 ControllerLabel::Special("GeneralPurpose2".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::GeneralPurpose3(value) => self.send_control_change(
                                 ControllerLabel::Special("GeneralPurpose3".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
                             ControlChange::GeneralPurpose4(value) => self.send_control_change(
                                 ControllerLabel::Special("GeneralPurpose4".into()),
-                                MidiValue::HiRes(*value),
+                                MidiValue::HighRes(*value),
                                 channel,
                             ),
 
@@ -283,7 +260,7 @@ impl MediationDataModel {
                     MidiValue::LowRes(x) => {
                         if let Some(prev_value) = self.known_controller_values.get(&key) {
                             let prev_value = match prev_value {
-                                MidiValue::HiRes(x) => {
+                                MidiValue::HighRes(x) => {
                                     error!("This value used to be u8");
                                     *x as u8
                                 }
@@ -301,33 +278,80 @@ impl MediationDataModel {
                             MidiValue::LowRes(x)
                         }
                     }
-                    MidiValue::HiRes(x) => {
+                    MidiValue::HighRes(x) => {
                         warn!("HiRes relative ignored (send as-is)");
-                        MidiValue::HiRes(x)
+                        MidiValue::HighRes(x)
                     }
                 }
             }
             ControllerValueMode::Absolute => value,
         };
-        let out_msg = TetherControlChangePayload {
+
+        // ControlChange Message...
+        let out_msg = ControlChangePayload {
             channel: channel_to_int(*channel),
-            controller: control_label,
-            value: send_absolute_value,
+            controller: control_label.clone(),
+            value: send_absolute_value.clone(),
         };
         self.tether_message_log.push_back(format!("{:?}", out_msg));
         self.tether_tx
             .send(TetherMidiMessage::ControlChange(out_msg))
             .unwrap();
-        // debug!(
-        //     "'Undefined' control change message: control = {:?}, value = {}",
-        //     &control_label, value
-        // );
+
+        // If applicable, Knob message...
+        if !self.knobs.is_empty() {
+            if let Some((i, matched)) =
+                self.knobs
+                    .iter()
+                    .enumerate()
+                    .find(|(_index, knob)| match &knob.controller {
+                        ControllerLabel::Numbered(channel_number) => {
+                            if let ControllerLabel::Numbered(n) = &control_label {
+                                n == channel_number
+                            } else {
+                                false
+                            }
+                        }
+                        ControllerLabel::Special(controller_name) => {
+                            if let ControllerLabel::Special(n) = &control_label {
+                                n == controller_name
+                            } else {
+                                false
+                            }
+                        }
+                    })
+            {
+                debug!("Found mapping {:?}", matched);
+                let position: f32 = match send_absolute_value {
+                    MidiValue::LowRes(x) => x as f32 / 255.0,
+                    MidiValue::HighRes(x) => (x as f32) / (MAX_HIRES as f32),
+                };
+                let knob_msg = KnobPayload {
+                    index: i as u8,
+                    position,
+                };
+                self.tether_message_log
+                    .push_back(format!("{:?}", &knob_msg));
+                self.tether_tx
+                    .send(TetherMidiMessage::Knob(knob_msg))
+                    .unwrap();
+            }
+        }
     }
 
     fn update_port_info(&mut self, index: usize) {
         for (key, info) in self.ports_metadata.iter_mut() {
             if key.eq(&format!("{index}")) {
                 info.last_received = SystemTime::now();
+            }
+        }
+    }
+
+    pub fn add_knob_mapping(&mut self, name: &str) {
+        match load_knob_mappings(name) {
+            Ok(knobs) => self.knobs = knobs,
+            Err(e) => {
+                error!("Failed to load knob mapping: {}", e);
             }
         }
     }

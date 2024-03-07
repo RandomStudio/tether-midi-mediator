@@ -34,6 +34,16 @@ pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
         });
     }
 
+    if !&model.knobs.is_empty() {
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.label("Knob Mappings:");
+            for (i, k) in model.knobs.iter().enumerate() {
+                ui.label(format!("#{}: {:?}  ", i, k.controller));
+            }
+        });
+    }
+
     ui.separator();
 
     ui.horizontal(|ui| {

@@ -103,6 +103,11 @@ fn main() {
         ));
     }
 
+    if let Some(name) = cli.knobs_device {
+        info!("Requested knob mappings for device named \"{}\" ...", name);
+        model.add_knob_mapping(&name);
+    }
+
     // for handle in handles {
     //     handle.join().unwrap();
     // }

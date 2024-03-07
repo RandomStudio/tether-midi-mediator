@@ -43,6 +43,9 @@ pub struct Cli {
     #[arg(long = "midi.relative")]
     pub relative_mode_enabled: bool,
 
+    #[arg(long = "knobs.device")]
+    pub knobs_device: Option<String>,
+
     /// Specify one or more MIDI ports by index, in any order
     #[clap()]
     pub midi_ports: Vec<usize>,
