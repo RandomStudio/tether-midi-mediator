@@ -6,7 +6,7 @@ use anyhow::anyhow;
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct KnobMapping {
-    pub channel: u8,
+    pub channel: Option<u8>,
     pub controller: ControllerLabel,
 }
 

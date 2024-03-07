@@ -300,27 +300,27 @@ impl MediationDataModel {
 
         // If applicable, Knob message...
         if !self.knobs.is_empty() {
-            if let Some((i, matched)) =
-                self.knobs
-                    .iter()
-                    .enumerate()
-                    .find(|(_index, knob)| match &knob.controller {
-                        ControllerLabel::Numbered(channel_number) => {
-                            if let ControllerLabel::Numbered(n) = &control_label {
-                                n == channel_number
-                            } else {
-                                false
-                            }
+            if let Some((i, matched)) = self.knobs.iter().enumerate().find(|(_index, knob)| {
+                if let Some(spec_channel) = knob.channel {
+                    return spec_channel == channel_to_int(*channel);
+                }
+                match &knob.controller {
+                    ControllerLabel::Numbered(channel_number) => {
+                        if let ControllerLabel::Numbered(n) = &control_label {
+                            n == channel_number
+                        } else {
+                            false
                         }
-                        ControllerLabel::Special(controller_name) => {
-                            if let ControllerLabel::Special(n) = &control_label {
-                                n == controller_name
-                            } else {
-                                false
-                            }
+                    }
+                    ControllerLabel::Special(controller_name) => {
+                        if let ControllerLabel::Special(n) = &control_label {
+                            n == controller_name
+                        } else {
+                            false
                         }
-                    })
-            {
+                    }
+                }
+            }) {
                 debug!("Found mapping {:?}", matched);
                 let position: f32 = match send_absolute_value {
                     MidiValue::LowRes(x) => x as f32 / 255.0,

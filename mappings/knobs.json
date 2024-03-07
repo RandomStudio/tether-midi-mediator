@@ -3,7 +3,6 @@
     "name": "FaderFoxC4",
     "knobs": [
       {
-        "channel": 1,
         "controller": {
           "Special": "ModWheel"
         }
