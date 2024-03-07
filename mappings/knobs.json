@@ -17,27 +17,156 @@
           "Special": "UndefinedHighRes-3-35"
         }
       },
-      { "controller": { "Special": "Foot" } },
-      { "controller": { "Special": "Portamento" } },
-      { "controller": { "Special": "DataEntry" } },
-      { "controller": { "Special": "Volume" } },
-      { "controller": { "Special": "Balance" } },
-      { "controller": { "Special": "UndefinedHighRes-9-41" } },
-      { "controller": { "Special": "Pan" } },
-      { "controller": { "Special": "Expression" } },
-      { "controller": { "Special": "Effect1" } },
-      { "controller": { "Special": "Effect2" } },
-      { "controller": { "Special": "UndefinedHighRes-14-46" } },
-      { "controller": { "Special": "UndefinedHighRes-15-47" } },
-      { "controller": { "Special": "GeneralPurpose1" } },
-      { "controller": { "Special": "GeneralPurpose2" } },
-      { "controller": { "Special": "GeneralPurpose3" } },
-      { "controller": { "Special": "GeneralPurpose4" } },
-      { "controller": { "Special": "UndefinedHighRes-20-52" } },
-      { "controller": { "Special": "UndefinedHighRes-21-53" } },
-      { "controller": { "Special": "UndefinedHighRes-22-54" } },
-      { "controller": { "Special": "UndefinedHighRes-23-55" } },
-      { "controller": { "Special": "UndefinedHighRes-24-56" } }
+      {
+        "controller": {
+          "Special": "Foot"
+        }
+      },
+      {
+        "controller": {
+          "Special": "Portamento"
+        }
+      },
+      {
+        "controller": {
+          "Special": "DataEntry"
+        }
+      },
+      {
+        "controller": {
+          "Special": "Volume"
+        }
+      },
+      {
+        "controller": {
+          "Special": "Balance"
+        }
+      },
+      {
+        "controller": {
+          "Special": "UndefinedHighRes-9-41"
+        }
+      },
+      {
+        "controller": {
+          "Special": "Pan"
+        }
+      },
+      {
+        "controller": {
+          "Special": "Expression"
+        }
+      },
+      {
+        "controller": {
+          "Special": "Effect1"
+        }
+      },
+      {
+        "controller": {
+          "Special": "Effect2"
+        }
+      },
+      {
+        "controller": {
+          "Special": "UndefinedHighRes-14-46"
+        }
+      },
+      {
+        "controller": {
+          "Special": "UndefinedHighRes-15-47"
+        }
+      },
+      {
+        "controller": {
+          "Special": "GeneralPurpose1"
+        }
+      },
+      {
+        "controller": {
+          "Special": "GeneralPurpose2"
+        }
+      },
+      {
+        "controller": {
+          "Special": "GeneralPurpose3"
+        }
+      },
+      {
+        "controller": {
+          "Special": "GeneralPurpose4"
+        }
+      },
+      {
+        "controller": {
+          "Special": "UndefinedHighRes-20-52"
+        }
+      },
+      {
+        "controller": {
+          "Special": "UndefinedHighRes-21-53"
+        }
+      },
+      {
+        "controller": {
+          "Special": "UndefinedHighRes-22-54"
+        }
+      },
+      {
+        "controller": {
+          "Special": "UndefinedHighRes-23-55"
+        }
+      },
+      {
+        "controller": {
+          "Special": "UndefinedHighRes-24-56"
+        }
+      }
+    ]
+  },
+  {
+    "name": "AkaAPCkey25",
+    "knobs": [
+      {
+        "controller": {
+          "Numbered": 48
+        }
+      },
+      {
+        "controller": {
+          "Numbered": 49
+        }
+      },
+      {
+        "controller": {
+          "Numbered": 50
+        }
+      },
+      {
+        "controller": {
+          "Numbered": 51
+        }
+      },
+      {
+        "controller": {
+          "Numbered": 52
+        }
+      },
+      {
+        "controller": {
+          "Numbered": 53
+        }
+      },
+      {
+        "controller": {
+          "Numbered": 54
+        }
+      },
+      {
+        "controller": {
+          "Numbered": 55
+        }
+      }
     ]
   }
 ]

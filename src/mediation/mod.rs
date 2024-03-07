@@ -40,6 +40,7 @@ pub enum ControllerValueMode {
 
 pub const MONITOR_LOG_LENGTH: usize = 16;
 pub const MAX_HIRES: u16 = 2u16.pow(14) - 128;
+pub const MAX_LORES: u8 = 127;
 // pub const HALF_HIRES: u16 = MAX_HIRES / 2;
 
 pub struct MediationDataModel {
@@ -323,7 +324,7 @@ impl MediationDataModel {
             }) {
                 debug!("Found mapping {:?}", matched);
                 let position: f32 = match send_absolute_value {
-                    MidiValue::LowRes(x) => x as f32 / 255.0,
+                    MidiValue::LowRes(x) => x as f32 / MAX_LORES as f32,
                     MidiValue::HighRes(x) => (x as f32) / (MAX_HIRES as f32),
                 };
                 let knob_msg = KnobPayload {
