@@ -36,11 +36,13 @@ pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
 
     if !&model.knobs.is_empty() {
         ui.separator();
-        ui.horizontal(|ui| {
+        ui.group(|ui| {
             ui.label("Knob Mappings:");
+            let mut map_text = String::from("");
             for (i, k) in model.knobs.iter().enumerate() {
-                ui.label(format!("#{}: {:?}  ", i, k.controller));
+                map_text.push_str(&format!("#{}: {:?}  ", i, k.controller));
             }
+            ui.small(map_text);
         });
     }
 
