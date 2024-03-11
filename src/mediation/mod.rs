@@ -280,7 +280,7 @@ impl MediationDataModel {
                         }
                     }
                     MidiValue::HighRes(x) => {
-                        warn!("HiRes relative ignored (send as-is)");
+                        debug!("HiRes relative ignored (send as-is)");
                         MidiValue::HighRes(x)
                     }
                 }
