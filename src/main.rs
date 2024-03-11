@@ -2,6 +2,7 @@ use std::{sync::mpsc, time::Duration};
 
 use clap::Parser;
 use eframe::egui;
+use egui::Vec2;
 use env_logger::Env;
 use gui::render_gui;
 use log::{debug, info, warn};
@@ -124,7 +125,7 @@ fn main() {
     } else {
         info!("Running graphics mode; close the window to quit");
         let options = eframe::NativeOptions {
-            initial_window_size: Some(egui::vec2(1280.0, 550.)),
+            viewport: egui::ViewportBuilder::default().with_inner_size(Vec2::new(1280., 500.)),
             ..Default::default()
         };
         eframe::run_native(
