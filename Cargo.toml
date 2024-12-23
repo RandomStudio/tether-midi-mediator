@@ -2,9 +2,17 @@
 name = "tether-midi-mediator"
 description = "MIDI to Tether messages"
 repository = "https://github.com/RandomStudio/tether-midi-mediator.git"
+homepage = "https://github.com/RandomStudio/tether-midi-mediator.git"
 version = "0.4.4"
 edition = "2021"
 license = "MIT"
+authors = ["Stephen Buchanan"]
+
+[package.metadata.wix]
+upgrade-guid = "A8235AD0-0028-44F3-B801-AAF25783C512"
+path-guid = "0513A950-7A26-41D5-BE12-C1B416CCD36A"
+license = false
+eula = false
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -26,3 +34,8 @@ serde_json = "1.0.91"
 rmp-serde = "1.1.1"
 circular-buffer = "0.1.1"
 anyhow = "1.0.71"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
