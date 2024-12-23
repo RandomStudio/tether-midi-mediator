@@ -1,3 +1,4 @@
+use ::anyhow::anyhow;
 use std::{
     collections::HashMap,
     sync::mpsc::{Receiver, Sender},
@@ -7,8 +8,7 @@ use std::{
 use circular_buffer::CircularBuffer;
 use log::{debug, error, warn};
 use midi_msg::{Channel, ControlChange, MidiMsg};
-
-use tether_agent::rmp_serde::to_vec_named;
+use rmp_serde::to_vec_named;
 
 use crate::{
     mediation::messages::{ControllerLabel, NotePayload, TetherMidiMessage},
@@ -348,12 +348,13 @@ impl MediationDataModel {
         }
     }
 
-    pub fn add_knob_mapping(&mut self, name: &str) {
+    pub fn add_knob_mapping(&mut self, name: &str) -> anyhow::Result<()> {
         match load_knob_mappings(name) {
-            Ok(knobs) => self.knobs = knobs,
-            Err(e) => {
-                error!("Failed to load knob mapping: {}", e);
+            Ok(knobs) => {
+                self.knobs = knobs;
+                Ok(())
             }
+            Err(e) => Err(anyhow!("Failed to load knob mapping: {}", e)),
         }
     }
 }

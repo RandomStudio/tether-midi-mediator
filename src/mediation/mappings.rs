@@ -20,10 +20,15 @@ pub fn load_knob_mappings(name: &str) -> anyhow::Result<Vec<KnobMapping>> {
     let json_str = include_str!("../../mappings/knobs.json");
     let all_mappings = serde_json::from_str::<Vec<DeviceWithMapping>>(json_str)
         .expect("failed to load knob mappings");
-    info!("...Loaded {} knob mappings OK", all_mappings.len());
+    debug!("...Loaded {} knob mappings OK", all_mappings.len());
     match all_mappings.iter().find(|x| x.name == name) {
         Some(device) => {
             let knobs = device.clone().knobs;
+            info!(
+                "Loaded {} knob mappings for device \"{}\" OK",
+                &device.name,
+                knobs.len()
+            );
             Ok(knobs)
         }
         None => Err(anyhow!("Could not find device with name  {}", name)),

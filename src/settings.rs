@@ -1,8 +1,4 @@
-use std::net::{IpAddr, Ipv4Addr};
-
 use clap::Parser;
-
-pub const LOCALHOST: std::net::IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -20,16 +16,8 @@ pub struct Cli {
     pub tether_disable: bool,
 
     /// The IP address of the Tether MQTT broker (server)
-    #[arg(long = "tether.host", default_value_t=LOCALHOST)]
-    pub tether_host: std::net::IpAddr,
-
-    /// Optional username for MQTT Broker
-    #[arg(long = "tether.username")]
-    pub tether_username: Option<String>,
-
-    /// Optional password for MQTT Broker
-    #[arg(long = "tether.password")]
-    pub tether_password: Option<String>,
+    #[arg(long = "tether.host", default_value_t=String::from("localhost"))]
+    pub tether_host: String,
 
     /// Override role for Tether Agent
     #[arg(long = "tether.role", default_value_t=String::from("midi"))]
@@ -43,8 +31,9 @@ pub struct Cli {
     #[arg(long = "midi.relative")]
     pub relative_mode_enabled: bool,
 
-    #[arg(long = "knobs.device")]
-    pub knobs_device: Option<String>,
+    /// Disable lookup of "knob mapping" for device(s)
+    #[arg(long = "knobs.disable", default_value_t = false)]
+    pub knobs_disable: bool,
 
     /// Specify one or more MIDI ports by index, in any order
     #[clap()]

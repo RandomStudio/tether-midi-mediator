@@ -39,7 +39,8 @@ fn main() {
     let cli = Cli::parse();
 
     env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level))
-        .filter_module("paho_mqtt", log::LevelFilter::Warn)
+        .filter_module("rumqttc", log::LevelFilter::Warn)
+        .filter_module("tether_agent", log::LevelFilter::Warn)
         .init();
     let available_port_indexes = list_midi_ports().expect("failed to list MIDI ports");
 
@@ -61,8 +62,6 @@ fn main() {
 
     let tether_settings = TetherSettings {
         host: cli.tether_host,
-        username: cli.tether_username,
-        password: cli.tether_password,
         role: cli.tether_role,
         id: cli.tether_id,
     };
@@ -95,7 +94,16 @@ fn main() {
         let midi_tx = midi_tx.clone();
         let (midi_input_port, port_name) =
             get_midi_connection(&midi_input, port).expect("failed to open MIDI port");
-        model.add_port(port, port_name);
+        model.add_port(port, port_name.clone());
+        if !cli.knobs_disable {
+            match model.add_knob_mapping(&port_name) {
+                Ok(_) => info!(
+                    "Added automatic knob mapping for device \"{}\" OK",
+                    &port_name
+                ),
+                Err(_) => warn!("Could not find mapping for device \"{}\"", &port_name),
+            }
+        }
         handles.push(midi_listener_thread(
             midi_input,
             midi_input_port,
@@ -103,15 +111,6 @@ fn main() {
             port,
         ));
     }
-
-    if let Some(name) = cli.knobs_device {
-        info!("Requested knob mappings for device named \"{}\" ...", name);
-        model.add_knob_mapping(&name);
-    }
-
-    // for handle in handles {
-    //     handle.join().unwrap();
-    // }
 
     if cli.headless_mode {
         info!("Running in headless mode; Ctrl+C to quit");

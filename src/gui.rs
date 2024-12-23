@@ -20,7 +20,7 @@ pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
 
     for (_key, info) in model.ports_metadata.iter() {
         ui.horizontal(|ui| {
-            ui.label(&format!("PORT #{}: \"{}\"", info.index, info.full_name));
+            ui.label(format!("PORT #{}: \"{}\"", info.index, info.full_name));
             if let Ok(elapsed) = info.last_received.elapsed() {
                 let color = if elapsed > Duration::from_secs(15) {
                     Color32::DARK_GRAY
@@ -66,7 +66,7 @@ pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
 
     ui.columns(2, |columns| {
         // Left: MIDI IN
-        columns[0].heading(&format!(
+        columns[0].heading(format!(
             "Last {} (max) MIDI messages received",
             MONITOR_LOG_LENGTH
         ));
@@ -85,7 +85,7 @@ pub fn render_gui(model: &mut MediationDataModel, ui: &mut egui::Ui) {
         }
 
         // Right: Tether OUT
-        columns[1].heading(&format!(
+        columns[1].heading(format!(
             "Last {} (max) Tether messages translated",
             MONITOR_LOG_LENGTH
         ));

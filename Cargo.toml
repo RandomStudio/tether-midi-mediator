@@ -2,7 +2,7 @@
 name = "tether-midi-mediator"
 description = "MIDI to Tether messages"
 repository = "https://github.com/RandomStudio/tether-midi-mediator.git"
-version = "0.4.3"
+version = "0.4.4"
 edition = "2021"
 license = "MIT"
 
@@ -13,7 +13,6 @@ name = "tether-midi"
 path = "src/main.rs"
 
 [dependencies]
-#anyhow = "1.0.71"
 clap = { version = "4.1.1", features = ["derive"] }
 eframe = "0.26.2"
 egui = { version = "0.26.2", features = ["persistence"] }
@@ -21,8 +20,9 @@ env_logger = "0.10.0"
 log = "0.4.18"
 midi-msg = "0.4.0"
 midir = "0.9.1"
-tether-agent = "0.5.1"
+tether-agent = "0.14"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.91"
+rmp-serde = "1.1.1"
 circular-buffer = "0.1.1"
 anyhow = "1.0.71"
