@@ -10,19 +10,20 @@ Available MIDI input ports will be detected automatically.
 ## Tether MIDI Messages
 This Agent translates MIDI into standardised Tether Messages on standard plugs.
 
-- **ControlChange** (knob/slider) input
+- **ControlChange** (knob/slider) MIDI input
   - Published on the plug `"controlChange"`
   - Keys are
     - `channel`: MIDI channel
     - `control`: knob/slider number/ID
     - `value`: absolute value 0-127
-- **Note On** input
+  - Additionally, `"knobs"` if "knob mapping" is enabled (see below)
+- **Note On** MIDI input
   - Published on the plug `"notesOn"`
   - Keys are
     - `channel`: MIDI channel
     - `note`: MIDI note number
     - `velocity`: volume/pressure 0-127
-- **Note Of** input
+- **Note Of** MIDI input
   - Published on the plug `"notesOff"`
   - Keys are
     - `channel`: MIDI channel
@@ -39,12 +40,13 @@ Other controllers, particularly those with "endless" knobs (no stop points), sen
 - Any "previously known" value for the same channel+controller is recalled and the increment/decrement is applied; the range is also clamped if necessary
 - The `"controlChange"` plug will publish only the absolute values; the `"raw"` plug will contain the original values sent by the controller
 
+Relative-mode is not standardised for MIDI devices. The above mechanism has been tested with an Akai APC Key25 Mk2. Submit an Issue if you think alternative algorithms should be possible.
+
 ## Knob Mappings
 Some devices (listed in `mappings/knobs.json`) will be matched automatically against their device name for a "knob mapping". This simply means that known ControlChange values are matched against a known order of "knobs" labelled 0, 1, 2, etc.
 
 Incoming ControlChange MIDI messages with a known "knob mapping" will additionally generate messages on a "knobs" OutputPlug which encodes an `index` and `position` (normalised float value between `0.0` and `1.0`).
 
-Relative-mode is not standardised for MIDI devices. The above mechanism has been tested with an Akai APC Key25 Mk2. Submit an Issue if you think alternative algorithms should be possible.
 ## CLI options
 You can change various settings using the command line. Append `--help` for more details.
 
